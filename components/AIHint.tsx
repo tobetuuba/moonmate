@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Brain, Lightbulb } from 'lucide-react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 
 interface AIHintProps {
   type: 'personality' | 'conversation' | 'compatibility';
@@ -12,10 +12,10 @@ interface AIHintProps {
 export default function AIHint({ type, title, description, score }: AIHintProps) {
   const getIcon = () => {
     switch (type) {
-      case 'personality': return <Brain size={20} color="#8B5FBF" />;
-      case 'conversation': return <Lightbulb size={20} color="#F59E0B" />;
-      case 'compatibility': return <Brain size={20} color="#E91E63" />;
-      default: return <Brain size={20} color="#8B5FBF" />;
+      case 'personality': return <MaterialIcons name="psychology" size={20} color="#8B5FBF" />;
+      case 'conversation': return <MaterialIcons name="lightbulb-outline" size={20} color="#F59E0B" />;
+      case 'compatibility': return <MaterialIcons name="psychology" size={20} color="#E91E63" />;
+      default: return <MaterialIcons name="psychology" size={20} color="#8B5FBF" />;
     }
   };
 

@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Switch } from 'react-native';
 import { router } from 'expo-router';
-import { Settings, Heart, Brain, Camera, CreditCard as Edit3, LogOut } from 'lucide-react-native';
+import { Feather } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
+import { FontAwesome } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function ProfileScreen() {
@@ -29,12 +32,12 @@ export default function ProfileScreen() {
           <View style={styles.avatarContainer}>
             <Image source={{ uri: user.avatar }} style={styles.avatar} />
             <TouchableOpacity style={styles.cameraButton}>
-              <Camera size={16} color="#FFFFFF" />
+              <FontAwesome name="camera" size={16} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
           <Text style={styles.userName}>{user.name}, {user.age}</Text>
           <TouchableOpacity style={styles.editButton}>
-            <Edit3 size={16} color="#FFFFFF" />
+            <MaterialIcons name="edit" size={16} color="#FFFFFF" />
             <Text style={styles.editButtonText}>Edit Profile</Text>
           </TouchableOpacity>
         </View>
@@ -50,7 +53,7 @@ export default function ProfileScreen() {
           <Text style={styles.sectionTitle}>AI Personality Analysis</Text>
           <View style={styles.personalityCard}>
             <View style={styles.personalityHeader}>
-              <Brain size={24} color="#8B5FBF" />
+              <MaterialIcons name="psychology" size={24} color="#8B5FBF" />
               <View>
                 <Text style={styles.personalityType}>{user.personalityType}</Text>
                 <Text style={styles.compatibilityText}>
@@ -80,7 +83,7 @@ export default function ProfileScreen() {
           
           <View style={styles.preferenceItem}>
             <View style={styles.preferenceLeft}>
-              <Heart size={20} color="#E91E63" />
+              <Ionicons name="heart" size={20} color="#E91E63" />
               <Text style={styles.preferenceText}>Push Notifications</Text>
             </View>
             <Switch
@@ -93,7 +96,7 @@ export default function ProfileScreen() {
 
           <View style={styles.preferenceItem}>
             <View style={styles.preferenceLeft}>
-              <Brain size={20} color="#8B5FBF" />
+              <MaterialIcons name="psychology" size={20} color="#8B5FBF" />
               <Text style={styles.preferenceText}>AI Insights</Text>
             </View>
             <Switch
@@ -105,7 +108,7 @@ export default function ProfileScreen() {
           </View>
 
           <TouchableOpacity style={styles.preferenceButton}>
-            <Settings size={20} color="#6B7280" />
+            <Feather name="settings" size={20} color="#6B7280" />
             <Text style={styles.preferenceButtonText}>Advanced Settings</Text>
           </TouchableOpacity>
 
@@ -115,7 +118,7 @@ export default function ProfileScreen() {
               // In a real app, you'd clear user data/tokens here
               router.replace('/login');
             }}>
-            <LogOut size={20} color="#DC2626" />
+            <MaterialIcons name="logout" size={20} color="#DC2626" />
             <Text style={[styles.preferenceButtonText, { color: '#DC2626' }]}>
               Sign Out
             </Text>

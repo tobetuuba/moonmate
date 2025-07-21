@@ -12,7 +12,9 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Eye, EyeOff, Mail, Lock, Heart, Sparkles } from 'lucide-react-native';
+import { Feather } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -58,8 +60,8 @@ export default function LoginScreen() {
           style={styles.headerGradient}>
           <View style={styles.header}>
             <View style={styles.logoContainer}>
-              <Heart size={40} color="#FFFFFF" />
-              <Sparkles size={24} color="#FFFFFF" style={styles.sparkleIcon} />
+              <Ionicons name="heart" size={40} color="#FFFFFF" />
+              <MaterialCommunityIcons name="sparkles" size={24} color="#FFFFFF" style={styles.sparkleIcon} />
             </View>
             <Text style={styles.title}>MoonMate</Text>
             <Text style={styles.subtitle}>Find your emotional connection</Text>
@@ -74,7 +76,7 @@ export default function LoginScreen() {
 
           <View style={styles.inputContainer}>
             <View style={styles.inputWrapper}>
-              <Mail size={20} color="#8B5FBF" style={styles.inputIcon} />
+              <Feather name="mail" size={20} color="#8B5FBF" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="Email address"
@@ -88,7 +90,7 @@ export default function LoginScreen() {
             </View>
 
             <View style={styles.inputWrapper}>
-              <Lock size={20} color="#8B5FBF" style={styles.inputIcon} />
+              <Feather name="lock" size={20} color="#8B5FBF" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="Password"
@@ -102,9 +104,9 @@ export default function LoginScreen() {
                 onPress={() => setShowPassword(!showPassword)}
                 style={styles.eyeIcon}>
                 {showPassword ? (
-                  <EyeOff size={20} color="#9CA3AF" />
+                  <Feather name="eye-off" size={20} color="#9CA3AF" />
                 ) : (
-                  <Eye size={20} color="#9CA3AF" />
+                  <Feather name="eye" size={20} color="#9CA3AF" />
                 )}
               </TouchableOpacity>
             </View>

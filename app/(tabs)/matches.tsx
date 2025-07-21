@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from 'react-native';
 import { router } from 'expo-router';
-import { MessageCircle, Heart, Clock } from 'lucide-react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 
 interface Match {
   id: string;
@@ -88,7 +90,7 @@ export default function MatchesScreen() {
         <View style={styles.matchHeader}>
           <Text style={styles.matchName}>{item.name}, {item.age}</Text>
           <View style={styles.compatibilityBadge}>
-            <Heart size={12} color="#E91E63" />
+            <Ionicons name="heart" size={12} color="#E91E63" />
             <Text style={styles.compatibilityText}>{item.compatibility}%</Text>
           </View>
         </View>
@@ -101,14 +103,14 @@ export default function MatchesScreen() {
         
         {item.lastMessageTime && (
           <View style={styles.timeContainer}>
-            <Clock size={12} color="#9CA3AF" />
+            <Feather name="clock" size={12} color="#9CA3AF" />
             <Text style={styles.timeText}>{item.lastMessageTime}</Text>
           </View>
         )}
       </View>
       
       <TouchableOpacity style={styles.chatButton} onPress={() => openChat(item)}>
-        <MessageCircle size={20} color="#8B5FBF" />
+        <MaterialIcons name="chat-bubble-outline" size={20} color="#8B5FBF" />
       </TouchableOpacity>
     </TouchableOpacity>
   );

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { CircleCheck as CheckCircle } from 'lucide-react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 
 interface TestQuestionProps {
   question: string;
@@ -54,7 +54,7 @@ export default function TestQuestion({
               {option}
             </Text>
             {selectedOption === option && (
-              <CheckCircle size={20} color="#8B5FBF" style={styles.checkIcon} />
+              <MaterialIcons name="check-circle" size={20} color="#8B5FBF" style={styles.checkIcon} />
             )}
           </TouchableOpacity>
         ))}

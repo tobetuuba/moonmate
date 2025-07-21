@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { router } from 'expo-router';
-import { ArrowLeft, Brain, Heart, CircleCheck as CheckCircle } from 'lucide-react-native';
+import { Feather } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 interface Question {
@@ -112,11 +114,11 @@ export default function TestMatchScreen() {
 
   const getCategoryIcon = (category: Question['category']) => {
     switch (category) {
-      case 'emotional': return <Heart size={20} color="#FFFFFF" />;
-      case 'lifestyle': return <Brain size={20} color="#FFFFFF" />;
-      case 'values': return <CheckCircle size={20} color="#FFFFFF" />;
-      case 'communication': return <Brain size={20} color="#FFFFFF" />;
-      default: return <Brain size={20} color="#FFFFFF" />;
+      case 'emotional': return <Ionicons name="heart" size={20} color="#FFFFFF" />;
+      case 'lifestyle': return <MaterialIcons name="psychology" size={20} color="#FFFFFF" />;
+      case 'values': return <MaterialIcons name="check-circle" size={20} color="#FFFFFF" />;
+      case 'communication': return <MaterialIcons name="psychology" size={20} color="#FFFFFF" />;
+      default: return <MaterialIcons name="psychology" size={20} color="#FFFFFF" />;
     }
   };
 
@@ -124,7 +126,7 @@ export default function TestMatchScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <ArrowLeft size={24} color="#1F2937" />
+          <Feather name="arrow-left" size={24} color="#1F2937" />
         </TouchableOpacity>
         <View style={styles.progressContainer}>
           <View style={styles.progressBar}>
@@ -164,7 +166,7 @@ export default function TestMatchScreen() {
                 {option}
               </Text>
               {selectedOption === option && (
-                <CheckCircle size={20} color="#8B5FBF" style={styles.checkIcon} />
+                <MaterialIcons name="check-circle" size={20} color="#8B5FBF" style={styles.checkIcon} />
               )}
             </TouchableOpacity>
           ))}

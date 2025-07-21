@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from 'react-native';
 import { router } from 'expo-router';
-import { MessageCircle, Heart, Search } from 'lucide-react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 
 interface ChatPreview {
   id: string;
@@ -88,7 +90,7 @@ export default function ChatScreen() {
         
         {item.aiInsight && (
           <View style={styles.aiInsightContainer}>
-            <Heart size={12} color="#8B5FBF" />
+            <Ionicons name="heart" size={12} color="#8B5FBF" />
             <Text style={styles.aiInsightText} numberOfLines={1}>
               {item.aiInsight}
             </Text>
@@ -109,7 +111,7 @@ export default function ChatScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Messages</Text>
         <TouchableOpacity style={styles.searchButton}>
-          <Search size={20} color="#6B7280" />
+          <Feather name="search" size={20} color="#6B7280" />
         </TouchableOpacity>
       </View>
       

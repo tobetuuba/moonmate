@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ImageBackground } from 'react-native';
 import { router } from 'expo-router';
-import { Heart, Brain, Sparkles } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function HomeScreen() {
@@ -28,7 +30,7 @@ export default function HomeScreen() {
 
       <View style={styles.content}>
         <View style={styles.welcomeSection}>
-          <Sparkles size={32} color="#8B5FBF" />
+          <MaterialCommunityIcons name="star-four-points" size={32} color="#8B5FBF" />
           <Text style={styles.welcomeText}>
             Welcome to a new way of dating. Choose how you'd like to connect:
           </Text>
@@ -39,7 +41,7 @@ export default function HomeScreen() {
             <LinearGradient
               colors={['#8B5FBF', '#A855F7']}
               style={styles.optionGradient}>
-              <Heart size={40} color="#FFFFFF" />
+              <Ionicons name="heart" size={40} color="#FFFFFF" />
               <Text style={styles.optionTitle}>Visual Match</Text>
               <Text style={styles.optionDescription}>
                 Swipe through profiles and discover connections through photos
@@ -51,7 +53,7 @@ export default function HomeScreen() {
             <LinearGradient
               colors={['#E91E63', '#F59E0B']}
               style={styles.optionGradient}>
-              <Brain size={40} color="#FFFFFF" />
+              <MaterialIcons name="psychology" size={40} color="#FFFFFF" />
               <Text style={styles.optionTitle}>Soul Match</Text>
               <Text style={styles.optionDescription}>
                 Take our AI-powered compatibility test for deeper connections

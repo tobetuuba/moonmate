@@ -1,5 +1,7 @@
 import { Tabs } from 'expo-router';
-import { Heart, MessageCircle, User, Chrome as Home } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
+import { FontAwesome } from '@expo/vector-icons';
 
 export default function TabLayout() {
   return (
@@ -26,7 +28,7 @@ export default function TabLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ size, color }) => (
-            <Home size={size} color={color} />
+            <Ionicons name="home" size={size} color={color} />
           ),
         }}
       />
@@ -35,7 +37,7 @@ export default function TabLayout() {
         options={{
           title: 'Matches',
           tabBarIcon: ({ size, color }) => (
-            <Heart size={size} color={color} />
+            <Ionicons name="heart" size={size} color={color} />
           ),
         }}
       />
@@ -44,7 +46,7 @@ export default function TabLayout() {
         options={{
           title: 'Chat',
           tabBarIcon: ({ size, color }) => (
-            <MessageCircle size={size} color={color} />
+            <MaterialIcons name="chat-bubble-outline" size={size} color={color} />
           ),
         }}
       />
@@ -53,7 +55,7 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ size, color }) => (
-            <User size={size} color={color} />
+            <FontAwesome name="user" size={size} color={color} />
           ),
         }}
       />

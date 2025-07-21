@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
-import { Heart, MessageCircle, MapPin } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 
 interface MatchCardProps {
   id: string;
@@ -34,13 +36,13 @@ export default function MatchCard({
         <View style={styles.header}>
           <Text style={styles.name}>{name}, {age}</Text>
           <View style={styles.compatibilityBadge}>
-            <Heart size={12} color="#E91E63" />
+            <Ionicons name="heart" size={12} color="#E91E63" />
             <Text style={styles.compatibilityText}>{compatibility}%</Text>
           </View>
         </View>
         
         <View style={styles.locationContainer}>
-          <MapPin size={14} color="#6B7280" />
+          <Feather name="map-pin" size={14} color="#6B7280" />
           <Text style={styles.distance}>{distance} km away</Text>
         </View>
         
@@ -57,10 +59,10 @@ export default function MatchCard({
         
         <View style={styles.actions}>
           <TouchableOpacity style={styles.likeButton} onPress={onLike}>
-            <Heart size={16} color="#E91E63" />
+            <Ionicons name="heart" size={16} color="#E91E63" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.messageButton} onPress={onMessage}>
-            <MessageCircle size={16} color="#8B5FBF" />
+            <MaterialIcons name="chat-bubble-outline" size={16} color="#8B5FBF" />
             <Text style={styles.messageButtonText}>Message</Text>
           </TouchableOpacity>
         </View>

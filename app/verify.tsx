@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ShieldCheck, ArrowLeft } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { auth } from '../services/firebase';
 
 export default function VerifyScreen() {
@@ -39,7 +39,8 @@ export default function VerifyScreen() {
       }, 1000);
     } catch (error) {
       setIsLoading(false);
-      Alert.alert('Error', error.message || 'Invalid code');
+      const message = (error instanceof Error && error.message) ? error.message : 'Invalid code';
+      Alert.alert('Error', message);
     }
   };
 
@@ -60,9 +61,9 @@ export default function VerifyScreen() {
           style={styles.headerGradient}>
           <View style={styles.header}>
             <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-              <ArrowLeft size={24} color="#FFFFFF" />
+              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
             </TouchableOpacity>
-            <ShieldCheck size={40} color="#FFFFFF" style={styles.logoIcon} />
+            <Ionicons name="shield-checkmark" size={40} color="#FFFFFF" style={styles.logoIcon} />
             <Text style={styles.title}>Verify Phone</Text>
             <Text style={styles.subtitle}>Enter the code sent to {phone}</Text>
           </View>

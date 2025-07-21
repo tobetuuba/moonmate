@@ -1,7 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, Dimensions, Image, TouchableOpacity, Animated, PanGestureHandler, State } from 'react-native';
 import { router } from 'expo-router';
-import { Heart, X, ArrowLeft, Zap, Star } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
+import { FontAwesome } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -108,7 +110,7 @@ export default function SwipeScreen() {
   if (currentIndex >= profiles.length) {
     return (
       <View style={styles.emptyContainer}>
-        <Star size={64} color="#8B5FBF" />
+        <FontAwesome name="star" size={64} color="#8B5FBF" />
         <Text style={styles.emptyTitle}>No more profiles!</Text>
         <Text style={styles.emptySubtitle}>
           Check back later for more potential matches
@@ -131,11 +133,11 @@ export default function SwipeScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
-          <ArrowLeft size={24} color="#1F2937" />
+          <Feather name="arrow-left" size={24} color="#1F2937" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Discover</Text>
         <TouchableOpacity style={styles.headerButton}>
-          <Zap size={24} color="#8B5FBF" />
+          <Feather name="zap" size={24} color="#8B5FBF" />
         </TouchableOpacity>
       </View>
 
@@ -158,7 +160,7 @@ export default function SwipeScreen() {
             style={styles.cardGradient}>
             
             <View style={styles.compatibilityBadge}>
-              <Heart size={16} color="#E91E63" />
+              <Ionicons name="heart" size={16} color="#E91E63" />
               <Text style={styles.compatibilityText}>{currentProfile.compatibility}% Match</Text>
             </View>
 
@@ -188,11 +190,11 @@ export default function SwipeScreen() {
 
       <View style={styles.actions}>
         <TouchableOpacity style={styles.rejectButton} onPress={onSwipeLeft}>
-          <X size={28} color="#FFFFFF" />
+          <Feather name="x" size={28} color="#FFFFFF" />
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.likeButton} onPress={onSwipeRight}>
-          <Heart size={28} color="#FFFFFF" />
+          <Ionicons name="heart" size={28} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
     </View>

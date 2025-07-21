@@ -1,7 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
-import { Brain, Heart, Users, MessageCircle, ArrowRight, Chrome as Home } from 'lucide-react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
+import { FontAwesome } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function TestResultScreen() {
@@ -42,7 +45,7 @@ export default function TestResultScreen() {
         end={{ x: 1, y: 1 }}
         style={styles.header}>
         <View style={styles.headerContent}>
-          <Brain size={48} color="#FFFFFF" />
+          <MaterialIcons name="psychology" size={48} color="#FFFFFF" />
           <Text style={styles.headerTitle}>Your Personality Profile</Text>
           <Text style={styles.headerSubtitle}>
             AI-powered analysis complete
@@ -60,7 +63,7 @@ export default function TestResultScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Heart size={24} color="#E91E63" />
+            <Ionicons name="heart" size={24} color="#E91E63" />
             <Text style={styles.sectionTitle}>Your Strengths</Text>
           </View>
           {personalityResult.strengths.map((strength, index) => (
@@ -73,7 +76,7 @@ export default function TestResultScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Users size={24} color="#8B5FBF" />
+            <FontAwesome name="users" size={24} color="#8B5FBF" />
             <Text style={styles.sectionTitle}>Best Compatibility</Text>
           </View>
           <View style={styles.compatibilityContainer}>
@@ -87,7 +90,7 @@ export default function TestResultScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <MessageCircle size={24} color="#2196F3" />
+            <MaterialIcons name="chat-bubble-outline" size={24} color="#2196F3" />
             <Text style={styles.sectionTitle}>AI Insights</Text>
           </View>
           {personalityResult.insights.map((insight, index) => (
@@ -103,12 +106,12 @@ export default function TestResultScreen() {
               colors={['#8B5FBF', '#E91E63']}
               style={styles.primaryButtonGradient}>
               <Text style={styles.primaryButtonText}>Find Your Matches</Text>
-              <ArrowRight size={20} color="#FFFFFF" />
+              <Feather name="arrow-right" size={20} color="#FFFFFF" />
             </LinearGradient>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.secondaryButton} onPress={goHome}>
-            <Home size={20} color="#6B7280" />
+            <Ionicons name="home" size={20} color="#6B7280" />
             <Text style={styles.secondaryButtonText}>Back to Home</Text>
           </TouchableOpacity>
         </View>

@@ -12,7 +12,9 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Phone, Heart, Sparkles, ArrowLeft } from 'lucide-react-native';
+import { Feather } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { auth } from '../services/firebase';
 import { signInWithPhoneNumber, RecaptchaVerifier } from 'firebase/auth';
 
@@ -56,11 +58,11 @@ export default function SignUpScreen() {
           style={styles.headerGradient}>
           <View style={styles.header}>
             <TouchableOpacity onPress={handleBackToLogin} style={styles.backButton}>
-              <ArrowLeft size={24} color="#FFFFFF" />
+              <Feather name="arrow-left" size={24} color="#FFFFFF" />
             </TouchableOpacity>
             <View style={styles.logoContainer}>
-              <Heart size={40} color="#FFFFFF" />
-              <Sparkles size={24} color="#FFFFFF" style={styles.sparkleIcon} />
+              <Ionicons name="heart" size={40} color="#FFFFFF" />
+              <MaterialCommunityIcons name="sparkles" size={24} color="#FFFFFF" style={styles.sparkleIcon} />
             </View>
             <Text style={styles.title}>MoonMate</Text>
             <Text style={styles.subtitle}>Sign up with your phone number</Text>
@@ -75,7 +77,7 @@ export default function SignUpScreen() {
 
           <View style={styles.inputContainer}>
             <View style={styles.inputWrapper}>
-              <Phone size={20} color="#8B5FBF" style={styles.inputIcon} />
+              <Feather name="phone" size={20} color="#8B5FBF" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="Phone number (e.g. +1234567890)"

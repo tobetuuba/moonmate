@@ -1,16 +1,21 @@
 import { useEffect } from 'react';
-import { router } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 
 export default function Index() {
   const { user } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
+    const timeout = setTimeout(() => {
     if (user) {
       router.replace('/(tabs)');
     } else {
-      router.replace('/login');
-    }
+        router.replace('/login');
+      }
+    }, 0);
+
+    return () => clearTimeout(timeout);
   }, [user]);
 
   return null;

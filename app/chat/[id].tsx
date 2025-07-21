@@ -10,7 +10,8 @@ import {
   Platform
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Send, Heart } from 'lucide-react-native';
+import { Feather } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 
 interface Message {
   id: string;
@@ -115,7 +116,7 @@ export default function ChatScreen() {
         </View>
         {item.aiAnalysis && !isUser && (
           <View style={styles.aiAnalysisContainer}>
-            <Heart size={12} color="#8B5FBF" />
+            <Ionicons name="heart" size={12} color="#8B5FBF" />
             <Text style={styles.aiAnalysisText}>
               Openness: {item.aiAnalysis.openness}% • Engagement: {item.aiAnalysis.engagement}%
             </Text>
@@ -132,7 +133,7 @@ export default function ChatScreen() {
       
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <ArrowLeft size={24} color="#1F2937" />
+          <Feather name="arrow-left" size={24} color="#1F2937" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{name}</Text>
         <View style={styles.onlineIndicator} />
@@ -161,7 +162,7 @@ export default function ChatScreen() {
           style={[styles.sendButton, !newMessage.trim() && styles.sendButtonDisabled]}
           onPress={sendMessage}
           disabled={!newMessage.trim()}>
-          <Send size={20} color={newMessage.trim() ? "#FFFFFF" : "#9CA3AF"} />
+          <Feather name="send" size={20} color={newMessage.trim() ? "#FFFFFF" : "#9CA3AF"} />
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Heart } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 interface ChatBubbleProps {
   message: string;
@@ -27,7 +27,7 @@ export default function ChatBubble({ message, isUser, timestamp, aiAnalysis }: C
       
       {aiAnalysis && !isUser && (
         <View style={styles.aiAnalysis}>
-          <Heart size={12} color="#8B5FBF" />
+          <Ionicons name="heart" size={12} color="#8B5FBF" />
           <Text style={styles.aiAnalysisText}>
             Openness: {aiAnalysis.openness}% • Engagement: {aiAnalysis.engagement}%
           </Text>
