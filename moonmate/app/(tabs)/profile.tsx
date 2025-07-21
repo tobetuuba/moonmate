@@ -109,7 +109,12 @@ export default function ProfileScreen() {
             <Text style={styles.preferenceButtonText}>Advanced Settings</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.preferenceButton}>
+          <TouchableOpacity 
+            style={styles.preferenceButton}
+            onPress={() => {
+              // In a real app, you'd clear user data/tokens here
+              router.replace('/login');
+            }}>
             <LogOut size={20} color="#DC2626" />
             <Text style={[styles.preferenceButtonText, { color: '#DC2626' }]}>
               Sign Out
