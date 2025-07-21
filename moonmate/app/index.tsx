@@ -1,11 +1,17 @@
 import { useEffect } from 'react';
 import { router } from 'expo-router';
+import { useAuth } from '../context/AuthContext';
 
 export default function Index() {
+  const { user } = useAuth();
+
   useEffect(() => {
-    // Redirect to login page by default
-    router.replace('/login');
-  }, []);
+    if (user) {
+      router.replace('/(tabs)');
+    } else {
+      router.replace('/login');
+    }
+  }, [user]);
 
   return null;
 } 
