@@ -12,49 +12,31 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Eye, EyeOff, Mail, Lock, User, Heart, Sparkles, ArrowLeft } from 'lucide-react-native';
+import { Phone, Heart, Sparkles, ArrowLeft } from 'lucide-react-native';
+import { auth } from '../services/firebase';
+import { signInWithPhoneNumber, RecaptchaVerifier } from 'firebase/auth';
 
 export default function SignUpScreen() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSignUp = async () => {
-    if (!name || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+    if (!phone) {
+      Alert.alert('Error', 'Please enter your phone number');
       return;
     }
-
-    if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
-      return;
-    }
-
-    if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters long');
-      return;
-    }
-
     setIsLoading(true);
-    
-    // Simulate sign up process
-    setTimeout(() => {
+    try {
+      // For web, RecaptchaVerifier is required. For Expo Go, this is not needed.
+      // For bare/standalone builds, use expo-firebase-recaptcha (not needed for web or managed workflow)
+      const confirmation = await signInWithPhoneNumber(auth, phone);
       setIsLoading(false);
-      Alert.alert(
-        'Success!', 
-        'Account created successfully! Please sign in.',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.replace('/login')
-          }
-        ]
-      );
-    }, 1500);
+      router.push({ pathname: '/verify', params: { phone } });
+      // Pass confirmation to verification screen via navigation or global state
+    } catch (error) {
+      setIsLoading(false);
+      Alert.alert('Error', error.message || 'Failed to send verification code');
+    }
   };
 
   const handleBackToLogin = () => {
@@ -81,86 +63,29 @@ export default function SignUpScreen() {
               <Sparkles size={24} color="#FFFFFF" style={styles.sparkleIcon} />
             </View>
             <Text style={styles.title}>MoonMate</Text>
-            <Text style={styles.subtitle}>Join the journey of meaningful connections</Text>
+            <Text style={styles.subtitle}>Sign up with your phone number</Text>
           </View>
         </LinearGradient>
 
         <View style={styles.formContainer}>
           <Text style={styles.welcomeText}>Create Account</Text>
           <Text style={styles.descriptionText}>
-            Start your journey to find meaningful connections
+            Enter your phone number to get started
           </Text>
 
           <View style={styles.inputContainer}>
             <View style={styles.inputWrapper}>
-              <User size={20} color="#8B5FBF" style={styles.inputIcon} />
+              <Phone size={20} color="#8B5FBF" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Full name"
+                placeholder="Phone number (e.g. +1234567890)"
                 placeholderTextColor="#9CA3AF"
-                value={name}
-                onChangeText={setName}
-                autoCapitalize="words"
-                autoCorrect={false}
-              />
-            </View>
-
-            <View style={styles.inputWrapper}>
-              <Mail size={20} color="#8B5FBF" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Email address"
-                placeholderTextColor="#9CA3AF"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
+                value={phone}
+                onChangeText={setPhone}
+                keyboardType="phone-pad"
                 autoCapitalize="none"
                 autoCorrect={false}
               />
-            </View>
-
-            <View style={styles.inputWrapper}>
-              <Lock size={20} color="#8B5FBF" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor="#9CA3AF"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-              />
-              <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeIcon}>
-                {showPassword ? (
-                  <EyeOff size={20} color="#9CA3AF" />
-                ) : (
-                  <Eye size={20} color="#9CA3AF" />
-                )}
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.inputWrapper}>
-              <Lock size={20} color="#8B5FBF" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Confirm password"
-                placeholderTextColor="#9CA3AF"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry={!showConfirmPassword}
-                autoCapitalize="none"
-              />
-              <TouchableOpacity
-                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                style={styles.eyeIcon}>
-                {showConfirmPassword ? (
-                  <EyeOff size={20} color="#9CA3AF" />
-                ) : (
-                  <Eye size={20} color="#9CA3AF" />
-                )}
-              </TouchableOpacity>
             </View>
           </View>
 
@@ -172,7 +97,7 @@ export default function SignUpScreen() {
               colors={['#8B5FBF', '#E91E63']}
               style={styles.signUpButtonGradient}>
               <Text style={styles.signUpButtonText}>
-                {isLoading ? 'Creating account...' : 'Create Account'}
+                {isLoading ? 'Sending code...' : 'Send Verification Code'}
               </Text>
             </LinearGradient>
           </TouchableOpacity>
@@ -188,12 +113,6 @@ export default function SignUpScreen() {
               Already have an account? <Text style={styles.loginLink}>Sign in</Text>
             </Text>
           </TouchableOpacity>
-
-          <Text style={styles.termsText}>
-            By creating an account, you agree to our{' '}
-            <Text style={styles.termsLink}>Terms of Service</Text> and{' '}
-            <Text style={styles.termsLink}>Privacy Policy</Text>
-          </Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -289,9 +208,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1F2937',
   },
-  eyeIcon: {
-    padding: 4,
-  },
   signUpButton: {
     borderRadius: 12,
     overflow: 'hidden',
@@ -340,15 +256,5 @@ const styles = StyleSheet.create({
   loginLink: {
     color: '#8B5FBF',
     fontWeight: 'bold',
-  },
-  termsText: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  termsLink: {
-    color: '#8B5FBF',
-    fontWeight: '600',
   },
 }); 
