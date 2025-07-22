@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -17,27 +17,73 @@ import { Ionicons } from '@expo/vector-icons';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { auth } from '../services/firebase';
 import { signInWithPhoneNumber, RecaptchaVerifier } from 'firebase/auth';
+import CountryPicker, { Country, CountryCode } from 'react-native-country-picker-modal'; // NEW: Country picker
+import { parsePhoneNumberFromString } from 'libphonenumber-js'; // NEW: Phone validation
 
 export default function SignUpScreen() {
+  const [countryCode, setCountryCode] = useState<CountryCode>('TR'); // Default to Turkey
+  const [country, setCountry] = useState<Country | undefined>(undefined);
+  const [withCountryNameButton] = useState(false);
   const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const phoneInputRef = useRef<TextInput>(null); // For autofocus
+
+  useEffect(() => {
+    // Autofocus phone input on mount
+    phoneInputRef.current?.focus();
+  }, []);
+
+  const onSelect = (selectedCountry: Country) => {
+    setCountryCode(selectedCountry.cca2 as CountryCode);
+    setCountry(selectedCountry);
+    setPhone(''); // Clear phone when country changes
+    setError('');
+  };
+
+  const handlePhoneChange = (text: string) => {
+    // Remove all non-numeric characters
+    const cleaned = text.replace(/[^0-9]/g, '');
+    setPhone(cleaned);
+    setError('');
+  };
+
+  const getFullNumber = () => {
+    // Always prepend country calling code
+    const code = country?.callingCode?.[0] ? `+${country.callingCode[0]}` : '';
+    return code + phone;
+  };
+
+  const validatePhoneNumber = () => {
+    if (!country) return false;
+    const fullNumber = getFullNumber();
+    const parsed = parsePhoneNumberFromString(fullNumber, country.cca2);
+    return parsed?.isValid() || false;
+  };
 
   const handleSignUp = async () => {
+    if (!country) {
+      setError('Please select a country');
+      return;
+    }
     if (!phone) {
-      Alert.alert('Error', 'Please enter your phone number');
+      setError('Please enter your phone number');
+      return;
+    }
+    if (!validatePhoneNumber()) {
+      setError('Please enter a valid phone number');
       return;
     }
     setIsLoading(true);
     try {
-      // For web, RecaptchaVerifier is required. For Expo Go, this is not needed.
-      // For bare/standalone builds, use expo-firebase-recaptcha (not needed for web or managed workflow)
-      const confirmation = await signInWithPhoneNumber(auth, phone);
+      const fullNumber = getFullNumber();
+      const confirmation = await signInWithPhoneNumber(auth, fullNumber);
       setIsLoading(false);
-      router.push({ pathname: '/verify', params: { phone } });
-      // Pass confirmation to verification screen via navigation or global state
+      router.push({ pathname: '/verify', params: { phone: fullNumber } });
     } catch (error) {
       setIsLoading(false);
       const message = (error instanceof Error && error.message) ? error.message : 'Failed to send verification code';
+      setError(message);
       Alert.alert('Error', message);
     }
   };
@@ -77,19 +123,37 @@ export default function SignUpScreen() {
           </Text>
 
           <View style={styles.inputContainer}>
-            <View style={styles.inputWrapper}>
-              <Feather name="phone" size={20} color="#8B5FBF" style={styles.inputIcon} />
+            <View style={styles.countryPhoneRow}>
+              <CountryPicker
+                countryCode={countryCode}
+                withFilter
+                withFlag
+                withCallingCode
+                withEmoji
+                withCountryNameButton={withCountryNameButton}
+                onSelect={onSelect}
+                containerButtonStyle={styles.countryPicker}
+              />
+              <View style={styles.callingCodeBox}>
+                <Text style={styles.callingCodeText}>
+                  {country?.callingCode ? `+${country.callingCode[0]}` : '+90'}
+                </Text>
+              </View>
               <TextInput
+                ref={phoneInputRef}
                 style={styles.input}
-                placeholder="Phone number (e.g. +1234567890)"
+                placeholder="Phone number"
                 placeholderTextColor="#9CA3AF"
                 value={phone}
-                onChangeText={setPhone}
+                onChangeText={handlePhoneChange}
                 keyboardType="phone-pad"
                 autoCapitalize="none"
                 autoCorrect={false}
+                maxLength={15}
+                returnKeyType="done"
               />
             </View>
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
           </View>
 
           <TouchableOpacity
@@ -259,5 +323,34 @@ const styles = StyleSheet.create({
   loginLink: {
     color: '#8B5FBF',
     fontWeight: 'bold',
+  },
+  countryPhoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  countryPicker: {
+    marginRight: 8,
+  },
+  callingCodeBox: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+    marginRight: 8,
+    minWidth: 48,
+    alignItems: 'center',
+  },
+  callingCodeText: {
+    fontSize: 16,
+    color: '#1F2937',
+    fontWeight: 'bold',
+  },
+  errorText: {
+    color: '#DC2626',
+    fontSize: 14,
+    marginTop: 4,
+    marginBottom: 4,
+    textAlign: 'center',
   },
 }); 
