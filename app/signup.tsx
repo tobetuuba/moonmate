@@ -37,7 +37,8 @@ export default function SignUpScreen() {
       // Pass confirmation to verification screen via navigation or global state
     } catch (error) {
       setIsLoading(false);
-      Alert.alert('Error', error.message || 'Failed to send verification code');
+      const message = (error instanceof Error && error.message) ? error.message : 'Failed to send verification code';
+      Alert.alert('Error', message);
     }
   };
 
@@ -62,7 +63,7 @@ export default function SignUpScreen() {
             </TouchableOpacity>
             <View style={styles.logoContainer}>
               <Ionicons name="heart" size={40} color="#FFFFFF" />
-              <MaterialCommunityIcons name="sparkles" size={24} color="#FFFFFF" style={styles.sparkleIcon} />
+              <MaterialCommunityIcons name="star-four-points" size={24} color="#FFFFFF" style={styles.sparkleIcon} />
             </View>
             <Text style={styles.title}>MoonMate</Text>
             <Text style={styles.subtitle}>Sign up with your phone number</Text>

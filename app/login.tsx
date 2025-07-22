@@ -61,7 +61,7 @@ export default function LoginScreen() {
           <View style={styles.header}>
             <View style={styles.logoContainer}>
               <Ionicons name="heart" size={40} color="#FFFFFF" />
-              <MaterialCommunityIcons name="sparkles" size={24} color="#FFFFFF" style={styles.sparkleIcon} />
+              <MaterialCommunityIcons name="star-four-points" size={24} color="#FFFFFF" style={styles.sparkleIcon} />
             </View>
             <Text style={styles.title}>MoonMate</Text>
             <Text style={styles.subtitle}>Find your emotional connection</Text>
