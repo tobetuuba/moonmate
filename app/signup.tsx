@@ -16,15 +16,18 @@ import { Feather } from '@expo/vector-icons';
 import { Ionicons } from '@expo/vector-icons';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { auth } from '../services/firebase';
-import { signInWithPhoneNumber, RecaptchaVerifier } from 'firebase/auth';
+import { signInWithPhoneNumber, RecaptchaVerifier, createUserWithEmailAndPassword } from 'firebase/auth'; // NEW: For email sign up
 import CountryPicker, { Country, CountryCode } from 'react-native-country-picker-modal'; // NEW: Country picker
 import { parsePhoneNumberFromString } from 'libphonenumber-js'; // NEW: Phone validation
 
 export default function SignUpScreen() {
+  const [mode, setMode] = useState<'email' | 'phone'>('email'); // NEW: toggle state
   const [countryCode, setCountryCode] = useState<CountryCode>('TR'); // Default to Turkey
   const [country, setCountry] = useState<Country | undefined>(undefined);
   const [withCountryNameButton] = useState(false);
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const phoneInputRef = useRef<TextInput>(null); // For autofocus
@@ -57,7 +60,12 @@ export default function SignUpScreen() {
   const validatePhoneNumber = () => {
     if (!country) return false;
     const fullNumber = getFullNumber();
-    const parsed = parsePhoneNumberFromString(fullNumber, country.cca2);
+    let parsed;
+    try {
+      parsed = parsePhoneNumberFromString(fullNumber, countryCode as any);
+    } catch {
+      return false;
+    }
     return parsed?.isValid() || false;
   };
 
@@ -83,6 +91,24 @@ export default function SignUpScreen() {
     } catch (error) {
       setIsLoading(false);
       const message = (error instanceof Error && error.message) ? error.message : 'Failed to send verification code';
+      setError(message);
+      Alert.alert('Error', message);
+    }
+  };
+
+  const handleEmailSignUp = async () => {
+    if (!email || !password) {
+      setError('Please enter email and password');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      setIsLoading(false);
+      router.replace('/(tabs)');
+    } catch (error) {
+      setIsLoading(false);
+      const message = (error instanceof Error && error.message) ? error.message : 'Failed to sign up';
       setError(message);
       Alert.alert('Error', message);
     }
@@ -116,58 +142,80 @@ export default function SignUpScreen() {
           </View>
         </LinearGradient>
 
-        <View style={styles.formContainer}>
-          <Text style={styles.welcomeText}>Create Account</Text>
-          <Text style={styles.descriptionText}>
-            Enter your phone number to get started
-          </Text>
-
-          <View style={styles.inputContainer}>
-            <View style={styles.countryPhoneRow}>
-              <CountryPicker
-                countryCode={countryCode}
-                withFilter
-                withFlag
-                withCallingCode
-                withEmoji
-                withCountryNameButton={withCountryNameButton}
-                onSelect={onSelect}
-                containerButtonStyle={styles.countryPicker}
-              />
-              <View style={styles.callingCodeBox}>
-                <Text style={styles.callingCodeText}>
-                  {country?.callingCode ? `+${country.callingCode[0]}` : '+90'}
-                </Text>
-              </View>
-              <TextInput
-                ref={phoneInputRef}
-                style={styles.input}
-                placeholder="Phone number"
-                placeholderTextColor="#9CA3AF"
-                value={phone}
-                onChangeText={handlePhoneChange}
-                keyboardType="phone-pad"
-                autoCapitalize="none"
-                autoCorrect={false}
-                maxLength={15}
-                returnKeyType="done"
-              />
-            </View>
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
-          </View>
-
-          <TouchableOpacity
-            style={[styles.signUpButton, isLoading && styles.signUpButtonDisabled]}
-            onPress={handleSignUp}
-            disabled={isLoading}>
-            <LinearGradient
-              colors={['#8B5FBF', '#E91E63']}
-              style={styles.signUpButtonGradient}>
-              <Text style={styles.signUpButtonText}>
-                {isLoading ? 'Sending code...' : 'Send Verification Code'}
-              </Text>
-            </LinearGradient>
+        <View style={styles.toggleRow}>
+          <TouchableOpacity onPress={() => setMode('email')} style={[styles.toggleButton, mode === 'email' && styles.toggleActive]}>
+            <Text style={styles.toggleText}>E-posta ile</Text>
           </TouchableOpacity>
+          <TouchableOpacity onPress={() => setMode('phone')} style={[styles.toggleButton, mode === 'phone' && styles.toggleActive]}>
+            <Text style={styles.toggleText}>Telefon ile</Text>
+          </TouchableOpacity>
+        </View>
+        {mode === 'email' ? (
+          <View style={styles.formContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="E-posta"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Şifre"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            <TouchableOpacity style={styles.signUpButton} onPress={handleEmailSignUp} disabled={isLoading}>
+              <LinearGradient colors={['#8B5FBF', '#E91E63']} style={styles.signUpButtonGradient}>
+                <Text style={styles.signUpButtonText}>{isLoading ? 'Kayıt Olunuyor...' : 'Kayıt Ol'}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.formContainer}>
+            <View style={styles.inputContainer}>
+              <View style={styles.countryPhoneRow}>
+                <CountryPicker
+                  countryCode={countryCode}
+                  withFilter
+                  withFlag
+                  withCallingCode
+                  withEmoji
+                  withCountryNameButton={withCountryNameButton}
+                  onSelect={onSelect}
+                  containerButtonStyle={styles.countryPicker}
+                />
+                <View style={styles.callingCodeBox}>
+                  <Text style={styles.callingCodeText}>
+                    {country?.callingCode ? `+${country.callingCode[0]}` : '+90'}
+                  </Text>
+                </View>
+                <TextInput
+                  ref={phoneInputRef}
+                  style={styles.input}
+                  placeholder="Telefon numarası"
+                  placeholderTextColor="#9CA3AF"
+                  value={phone}
+                  onChangeText={handlePhoneChange}
+                  keyboardType="phone-pad"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  maxLength={15}
+                  returnKeyType="done"
+                />
+              </View>
+              {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            </View>
+            <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp} disabled={isLoading}>
+              <LinearGradient colors={['#8B5FBF', '#E91E63']} style={styles.signUpButtonGradient}>
+                <Text style={styles.signUpButtonText}>{isLoading ? 'Kayıt Olunuyor...' : 'Kayıt Ol'}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        )}
 
           <View style={styles.dividerContainer}>
             <View style={styles.divider} />
@@ -180,7 +228,6 @@ export default function SignUpScreen() {
               Already have an account? <Text style={styles.loginLink}>Sign in</Text>
             </Text>
           </TouchableOpacity>
-        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -353,4 +400,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     textAlign: 'center',
   },
+  toggleRow: { flexDirection: 'row', justifyContent: 'center', marginVertical: 24 },
+  toggleButton: { padding: 12, borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  toggleActive: { borderBottomColor: '#8B5FBF' },
+  toggleText: { fontSize: 16, color: '#8B5FBF', fontWeight: 'bold' },
 }); 
