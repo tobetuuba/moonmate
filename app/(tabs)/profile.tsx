@@ -6,9 +6,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { MaterialIcons } from '@expo/vector-icons';
 import { FontAwesome } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useNotifications } from '../../context/NotificationContext';
 
 export default function ProfileScreen() {
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const { hasPermission, requestPermission, sendTestNotification, scheduleDailyReminder, cancelAllNotifications } = useNotifications();
   const [aiInsightsEnabled, setAiInsightsEnabled] = useState(true);
 
   const user = {
@@ -99,16 +100,38 @@ export default function ProfileScreen() {
           
           <View style={styles.preferenceItem}>
             <View style={styles.preferenceLeft}>
-              <Ionicons name="heart" size={20} color="#E91E63" />
+              <Ionicons name="notifications" size={20} color="#E91E63" />
               <Text style={styles.preferenceText}>Push Notifications</Text>
             </View>
             <Switch
-              value={notificationsEnabled}
-              onValueChange={setNotificationsEnabled}
+              value={hasPermission}
+              onValueChange={requestPermission}
               trackColor={{ false: '#F3F4F6', true: '#8B5FBF' }}
               thumbColor="#FFFFFF"
             />
           </View>
+
+          {hasPermission && (
+            <>
+              <TouchableOpacity style={styles.preferenceButton} onPress={sendTestNotification}>
+                <Ionicons name="flash" size={20} color="#8B5FBF" />
+                <Text style={styles.preferenceButtonText}>Send Test Notification</Text>
+                <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.preferenceButton} onPress={scheduleDailyReminder}>
+                <Ionicons name="time" size={20} color="#8B5FBF" />
+                <Text style={styles.preferenceButtonText}>Schedule Daily Reminder</Text>
+                <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.preferenceButton} onPress={cancelAllNotifications}>
+                <Ionicons name="close-circle" size={20} color="#EF4444" />
+                <Text style={styles.preferenceButtonText}>Cancel All Notifications</Text>
+                <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+              </TouchableOpacity>
+            </>
+          )}
 
           <View style={styles.preferenceItem}>
             <View style={styles.preferenceLeft}>

@@ -16,6 +16,7 @@ import { Feather } from '@expo/vector-icons';
 import { Ionicons } from '@expo/vector-icons';
 import { MaterialIcons } from '@expo/vector-icons';
 import { ConversationAnalyzer, ConversationMetrics, ConversationInsight } from '../../services/ai/ConversationAnalyzer';
+import { NotificationService } from '../../services/NotificationService';
 
 interface Message {
   id: string;
@@ -153,6 +154,25 @@ export default function ChatScreen() {
           )
         );
       }
+
+      // Simulate receiving a response (in real app, this would come from backend)
+      setTimeout(async () => {
+        const responseMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          text: `Thanks for your message! I'll get back to you soon. 😊`,
+          sender: 'other',
+          timestamp: new Date(),
+        };
+        
+        setMessages(prev => [...prev, responseMessage]);
+        
+        // Send message notification
+        await NotificationService.sendMessageNotification(
+          name || 'Match',
+          responseMessage.text,
+          id || '1'
+        );
+      }, 2000);
     }
   };
 

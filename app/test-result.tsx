@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -6,8 +6,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { FontAwesome } from '@expo/vector-icons';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { NotificationService } from '../services/NotificationService';
 
 export default function TestResultScreen() {
+  // Send test result notification when component mounts
+  useEffect(() => {
+    const sendNotification = async () => {
+      await NotificationService.sendTestResultNotification();
+    };
+    
+    sendNotification();
+  }, []);
+
   // AI INTEGRATION HERE: This would be generated based on user's test answers
   const personalityResult = {
     type: 'Empathetic Communicator',

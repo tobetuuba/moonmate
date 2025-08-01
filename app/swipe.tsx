@@ -1,10 +1,11 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, Dimensions, Image, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, Image, TouchableOpacity, Animated, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Feather } from '@expo/vector-icons';
 import { FontAwesome } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { NotificationService } from '../services/NotificationService';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const CARD_HEIGHT = SCREEN_HEIGHT * 0.7;
@@ -78,9 +79,28 @@ export default function SwipeScreen() {
     });
   };
 
-  const onSwipeRight = () => {
-    animateCard(SCREEN_WIDTH, () => {
+  const onSwipeRight = async () => {
+    animateCard(SCREEN_WIDTH, async () => {
       // Handle match logic here
+      const isMatch = Math.random() > 0.7; // 30% chance of match
+      
+      if (isMatch && currentProfile) {
+        // Send match notification
+        await NotificationService.sendMatchNotification(
+          currentProfile.name,
+          currentProfile.id
+        );
+        
+        Alert.alert(
+          '🎉 It\'s a Match!',
+          `You and ${currentProfile.name} liked each other!`,
+          [
+            { text: 'Start Chat', onPress: () => router.push(`/chat/${currentProfile.id}?name=${currentProfile.name}`) },
+            { text: 'Continue Swiping', style: 'cancel' }
+          ]
+        );
+      }
+      
       setCurrentIndex(prev => prev + 1);
       resetCard();
     });
