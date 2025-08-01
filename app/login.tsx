@@ -153,10 +153,10 @@ export default function LoginScreen() {
 
           <View style={styles.toggleRow}>
             <TouchableOpacity onPress={() => setMode('email')} style={[styles.toggleButton, mode === 'email' && styles.toggleActive]}>
-              <Text style={styles.toggleText}>E-posta ile</Text>
+              <Text style={styles.toggleText}>Email</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setMode('phone')} style={[styles.toggleButton, mode === 'phone' && styles.toggleActive]}>
-              <Text style={styles.toggleText}>Telefon ile</Text>
+              <Text style={styles.toggleText}>Phone</Text>
             </TouchableOpacity>
           </View>
           {mode === 'email' ? (
@@ -167,7 +167,7 @@ export default function LoginScreen() {
               </Text>
               <TextInput
                 style={styles.input}
-                placeholder="E-posta"
+                placeholder="Email"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -176,7 +176,7 @@ export default function LoginScreen() {
               />
               <TextInput
                 style={styles.input}
-                placeholder="Şifre"
+                placeholder="Password"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
@@ -204,7 +204,7 @@ export default function LoginScreen() {
                   colors={['#8B5FBF', '#E91E63']}
                   style={styles.loginButtonGradient}>
                   <Text style={styles.loginButtonText}>
-                    {isLoading ? 'Signing in...' : 'Sign In'}
+                    {isLoading ? 'Signing In...' : 'Sign In'}
                   </Text>
                 </LinearGradient>
               </TouchableOpacity>
@@ -234,8 +234,8 @@ export default function LoginScreen() {
                   </View>
                   <TextInput
                     ref={phoneInputRef}
-                    style={styles.input}
-                    placeholder="Telefon numarası"
+                    style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                    placeholder="Phone number"
                     placeholderTextColor="#9CA3AF"
                     value={phone}
                     onChangeText={handlePhoneChange}
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#1F2937',
-    marginBottom: 2,
+    marginBottom: 8,
     textAlign: 'center',
   },
   descriptionText: {
@@ -360,17 +360,18 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   input: {
-    flex: 1,
-    fontSize: 18,
+    fontSize: 16,
     color: '#1F2937',
     backgroundColor: '#fff',
-    borderRadius: 16,
+    borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 20,
+    paddingVertical: 16,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    textAlign: 'left',
     marginBottom: 16,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 320,
   },
   eyeIcon: {
     padding: 4,
@@ -396,6 +397,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.13,
     shadowRadius: 3,
     width: '100%',
+    maxWidth: 320,
+    alignSelf: 'center',
   },
   loginButtonDisabled: {
     opacity: 0.7,
@@ -442,6 +445,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
     width: '100%',
+    maxWidth: 320,
+    alignSelf: 'center',
   },
   countryPicker: {
     marginRight: 8,
