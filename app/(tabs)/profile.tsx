@@ -79,6 +79,22 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Birth Data</Text>
+          <TouchableOpacity 
+            style={styles.birthDataCard}
+            onPress={() => router.push('/birth-data')}>
+            <View style={styles.birthDataContent}>
+              <MaterialIcons name="cake" size={24} color="#8B5FBF" />
+              <View style={styles.birthDataInfo}>
+                <Text style={styles.birthDataTitle}>Astrological Profile</Text>
+                <Text style={styles.birthDataSubtitle}>Add your birth data for zodiac matching</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#8B5FBF" />
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Preferences</Text>
           
           <View style={styles.preferenceItem}>
@@ -290,5 +306,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6B7280',
     fontWeight: '500',
+  },
+  birthDataCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+  },
+  birthDataContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  birthDataInfo: {
+    flex: 1,
+  },
+  birthDataTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  birthDataSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
   },
 });

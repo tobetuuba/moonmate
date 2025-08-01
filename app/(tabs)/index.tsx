@@ -15,6 +15,10 @@ export default function HomeScreen() {
     router.push('/test-match');
   };
 
+  const navigateToZodiac = () => {
+    router.push('/birth-data');
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -57,6 +61,18 @@ export default function HomeScreen() {
               <Text style={styles.optionTitle}>Soul Match</Text>
               <Text style={styles.optionDescription}>
                 Take our AI-powered compatibility test for deeper connections
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.optionCard} onPress={navigateToZodiac}>
+            <LinearGradient
+              colors={['#10B981', '#059669']}
+              style={styles.optionGradient}>
+              <MaterialIcons name="stars" size={40} color="#FFFFFF" />
+              <Text style={styles.optionTitle}>Zodiac Match</Text>
+              <Text style={styles.optionDescription}>
+                Discover cosmic compatibility through astrological insights
               </Text>
             </LinearGradient>
           </TouchableOpacity>

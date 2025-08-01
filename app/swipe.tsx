@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, Dimensions, Image, TouchableOpacity, Animated, PanGestureHandler, State } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, Image, TouchableOpacity, Animated } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Feather } from '@expo/vector-icons';

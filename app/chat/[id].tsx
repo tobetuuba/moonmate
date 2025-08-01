@@ -7,11 +7,15 @@ import {
   TextInput, 
   TouchableOpacity,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  Alert,
+  ScrollView
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { Ionicons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
+import { ConversationAnalyzer, ConversationMetrics, ConversationInsight } from '../../services/ai/ConversationAnalyzer';
 
 interface Message {
   id: string;
@@ -19,7 +23,7 @@ interface Message {
   sender: 'user' | 'other';
   timestamp: Date;
   aiAnalysis?: {
-    tone: 'positive' | 'neutral' | 'negative';
+    tone: 'positive' | 'neutral' | 'negative' | 'mixed';
     openness: number;
     engagement: number;
   };
@@ -75,6 +79,9 @@ export default function ChatScreen() {
     }
   ]);
   const [newMessage, setNewMessage] = useState('');
+  const [aiInsights, setAiInsights] = useState<ConversationInsight | null>(null);
+  const [showAiInsights, setShowAiInsights] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {
@@ -84,7 +91,45 @@ export default function ChatScreen() {
     }
   }, [messages]);
 
-  const sendMessage = () => {
+  const analyzeMessage = async (message: string) => {
+    try {
+      setIsAnalyzing(true);
+      const analysis = await ConversationAnalyzer.analyzeMessage(message);
+      
+      // Check for red flags
+      const redFlags = await ConversationAnalyzer.detectRedFlags(message);
+      if (redFlags.length > 0) {
+        Alert.alert(
+          'AI Analysis Alert',
+          `Potential concerns detected: ${redFlags.join(', ')}`,
+          [{ text: 'OK' }]
+        );
+      }
+      
+      return analysis;
+    } catch (error) {
+      console.error('Error analyzing message:', error);
+      return null;
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const analyzeConversation = async () => {
+    try {
+      setIsAnalyzing(true);
+      const messageTexts = messages.map(msg => msg.text);
+      const insights = await ConversationAnalyzer.analyzeConversation(messageTexts);
+      setAiInsights(insights);
+      setShowAiInsights(true);
+    } catch (error) {
+      console.error('Error analyzing conversation:', error);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const sendMessage = async () => {
     if (newMessage.trim()) {
       const message: Message = {
         id: Date.now().toString(),
@@ -96,8 +141,18 @@ export default function ChatScreen() {
       setMessages(prev => [...prev, message]);
       setNewMessage('');
       
-      // AI INTEGRATION HERE: Analyze message for tone, openness, engagement
-      // This would send the message to the AI service for analysis
+      // AI Analysis of the sent message
+      const analysis = await analyzeMessage(newMessage);
+      if (analysis) {
+        // Update the message with AI analysis
+        setMessages(prev => 
+          prev.map(msg => 
+            msg.id === message.id 
+              ? { ...msg, aiAnalysis: analysis }
+              : msg
+          )
+        );
+      }
     }
   };
 
@@ -136,7 +191,16 @@ export default function ChatScreen() {
           <Feather name="arrow-left" size={24} color="#1F2937" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{name}</Text>
-        <View style={styles.onlineIndicator} />
+        <TouchableOpacity 
+          style={styles.aiButton} 
+          onPress={analyzeConversation}
+          disabled={isAnalyzing}>
+          <MaterialIcons 
+            name="psychology" 
+            size={24} 
+            color={isAnalyzing ? "#9CA3AF" : "#8B5FBF"} 
+          />
+        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -165,6 +229,60 @@ export default function ChatScreen() {
           <Feather name="send" size={20} color={newMessage.trim() ? "#FFFFFF" : "#9CA3AF"} />
         </TouchableOpacity>
       </View>
+
+      {/* AI Insights Modal */}
+      {showAiInsights && aiInsights && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <MaterialIcons name="psychology" size={24} color="#8B5FBF" />
+              <Text style={styles.modalTitle}>AI Conversation Analysis</Text>
+              <TouchableOpacity onPress={() => setShowAiInsights(false)}>
+                <Ionicons name="close" size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              <View style={styles.insightSection}>
+                <Text style={styles.insightSectionTitle}>Summary</Text>
+                <Text style={styles.insightText}>{aiInsights.summary}</Text>
+              </View>
+
+              <View style={styles.insightSection}>
+                <Text style={styles.insightSectionTitle}>Recommendations</Text>
+                {aiInsights.recommendations.map((rec, index) => (
+                  <View key={index} style={styles.recommendationItem}>
+                    <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                    <Text style={styles.recommendationText}>{rec}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <View style={styles.insightSection}>
+                <Text style={styles.insightSectionTitle}>Compatibility Indicators</Text>
+                {aiInsights.compatibilityIndicators.map((indicator, index) => (
+                  <View key={index} style={styles.indicatorItem}>
+                    <Ionicons name="star" size={16} color="#8B5FBF" />
+                    <Text style={styles.indicatorText}>{indicator}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {aiInsights.warningFlags && aiInsights.warningFlags.length > 0 && (
+                <View style={styles.insightSection}>
+                  <Text style={styles.insightSectionTitle}>Warning Flags</Text>
+                  {aiInsights.warningFlags.map((flag, index) => (
+                    <View key={index} style={styles.warningItem}>
+                      <Ionicons name="warning" size={16} color="#EF4444" />
+                      <Text style={styles.warningText}>{flag}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -196,11 +314,8 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     flex: 1,
   },
-  onlineIndicator: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#10B981',
+  aiButton: {
+    padding: 8,
   },
   messagesList: {
     flex: 1,
@@ -290,5 +405,96 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     backgroundColor: '#F3F4F6',
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    margin: 20,
+    maxHeight: '80%',
+    width: '90%',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    gap: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    flex: 1,
+  },
+  modalBody: {
+    padding: 20,
+  },
+  insightSection: {
+    marginBottom: 24,
+  },
+  insightSectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 12,
+  },
+  insightText: {
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 20,
+  },
+  recommendationItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+    gap: 8,
+  },
+  recommendationText: {
+    fontSize: 14,
+    color: '#374151',
+    flex: 1,
+    lineHeight: 20,
+  },
+  indicatorItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+    gap: 8,
+  },
+  indicatorText: {
+    fontSize: 14,
+    color: '#374151',
+    flex: 1,
+    lineHeight: 20,
+  },
+  warningItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+    gap: 8,
+  },
+  warningText: {
+    fontSize: 14,
+    color: '#EF4444',
+    flex: 1,
+    lineHeight: 20,
   },
 });

@@ -34,7 +34,7 @@ export default function TestResultScreen() {
   };
 
   const goHome = () => {
-    router.push('/(tabs)/');
+    router.push('/(tabs)');
   };
 
   return (
