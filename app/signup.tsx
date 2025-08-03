@@ -17,6 +17,8 @@ import { Feather } from '@expo/vector-icons';
 import { Ionicons } from '@expo/vector-icons';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import CountryPicker, { Country, CountryCode } from 'react-native-country-picker-modal';
+import { auth } from '../services/firebase';
+import { createUserWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -46,9 +48,88 @@ export default function SignUpScreen() {
     setError('');
   };
 
-  // Dummy handle
-  const handleSignUp = () => {};
-  const handleEmailSignUp = () => {};
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validatePassword = (password: string) => {
+    return password.length >= 6;
+  };
+
+  const validatePhone = (phone: string) => {
+    return phone.length >= 10;
+  };
+
+  const handleSignUp = async () => {
+    try {
+      setError('');
+      setIsLoading(true);
+
+      // Validate phone number
+      if (!validatePhone(phone)) {
+        setError('Please enter a valid phone number');
+        return;
+      }
+
+      // For phone signup, we'll use anonymous authentication for now
+      // In a real app, you'd implement phone verification
+      const userCredential = await signInAnonymously(auth);
+      console.log('Anonymous signup successful:', userCredential.user.uid);
+      
+      Alert.alert('Success', 'Account created successfully!', [
+        { text: 'OK', onPress: () => router.push('/create-profile') }
+      ]);
+    } catch (error: any) {
+      console.error('Phone signup error:', error);
+      setError(error.message || 'Failed to create account');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const handleEmailSignUp = async () => {
+    try {
+      setError('');
+      setIsLoading(true);
+
+      // Validate email
+      if (!validateEmail(email)) {
+        setError('Please enter a valid email address');
+        return;
+      }
+
+      // Validate password
+      if (!validatePassword(password)) {
+        setError('Password must be at least 6 characters long');
+        return;
+      }
+
+      // Create user with email and password
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      console.log('Email signup successful:', userCredential.user.uid);
+      
+      Alert.alert('Success', 'Account created successfully!', [
+        { text: 'OK', onPress: () => router.push('/create-profile') }
+      ]);
+    } catch (error: any) {
+      console.error('Email signup error:', error);
+      
+      // Handle specific Firebase auth errors
+      if (error.code === 'auth/email-already-in-use') {
+        setError('An account with this email already exists');
+      } else if (error.code === 'auth/invalid-email') {
+        setError('Invalid email address');
+      } else if (error.code === 'auth/weak-password') {
+        setError('Password is too weak');
+      } else {
+        setError(error.message || 'Failed to create account');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   const handleBackToLogin = () => router.replace('/login');
 
   return (
@@ -77,7 +158,7 @@ export default function SignUpScreen() {
               />
             </View>
             <Text style={styles.title}>MoonMate</Text>
-            <Text style={styles.subtitle}>Sign up with your phone number</Text>
+            <Text style={styles.subtitle}>Create your account</Text>
           </View>
         </LinearGradient>
 
@@ -86,13 +167,13 @@ export default function SignUpScreen() {
             onPress={() => setMode('email')}
             style={[styles.toggleButton, mode === 'email' && styles.toggleActive]}
           >
-            <Text style={styles.toggleText}>E-posta ile</Text>
+            <Text style={styles.toggleText}>Email</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setMode('phone')}
             style={[styles.toggleButton, mode === 'phone' && styles.toggleActive]}
           >
-            <Text style={styles.toggleText}>Telefon ile</Text>
+            <Text style={styles.toggleText}>Phone</Text>
           </TouchableOpacity>
         </View>
 
@@ -120,7 +201,7 @@ export default function SignUpScreen() {
             />
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
             <TouchableOpacity
-              style={styles.signUpButton}
+              style={[styles.signUpButton, isLoading && styles.signUpButtonDisabled]}
               onPress={handleEmailSignUp}
               disabled={isLoading}
             >
@@ -129,7 +210,7 @@ export default function SignUpScreen() {
                 style={styles.signUpButtonGradient}
               >
                 <Text style={styles.signUpButtonText}>
-                  {isLoading ? 'Signing Up...' : 'Sign Up'}
+                  {isLoading ? 'Creating Account...' : 'Create Account'}
                 </Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -154,7 +235,7 @@ export default function SignUpScreen() {
               <TextInput
                 ref={phoneInputRef}
                 style={styles.input}
-                placeholder="Telefon numarası"
+                placeholder="Phone number"
                 placeholderTextColor="#9CA3AF"
                 value={phone}
                 onChangeText={setPhone}
@@ -167,7 +248,7 @@ export default function SignUpScreen() {
             </View>
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
             <TouchableOpacity
-              style={styles.signUpButton}
+              style={[styles.signUpButton, isLoading && styles.signUpButtonDisabled]}
               onPress={handleSignUp}
               disabled={isLoading}
             >
@@ -176,7 +257,7 @@ export default function SignUpScreen() {
                 style={styles.signUpButtonGradient}
               >
                 <Text style={styles.signUpButtonText}>
-                  {isLoading ? 'Signing Up...' : 'Sign Up'}
+                  {isLoading ? 'Creating Account...' : 'Create Account'}
                 </Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -295,6 +376,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
+  },
+  signUpButtonDisabled: {
+    opacity: 0.6,
   },
   signUpButtonGradient: {
     paddingVertical: screenHeight * 0.018,

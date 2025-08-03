@@ -37,7 +37,9 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
           <Text style={styles.userName}>{user.name}, {user.age}</Text>
-          <TouchableOpacity style={styles.editButton}>
+          <TouchableOpacity 
+            style={styles.editButton}
+            onPress={() => router.push('/create-profile')}>
             <MaterialIcons name="edit" size={16} color="#FFFFFF" />
             <Text style={styles.editButtonText}>Edit Profile</Text>
           </TouchableOpacity>
