@@ -20,4 +20,11 @@ const auth = initializeAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
+// Debug Firebase configuration
+console.log('Firebase initialized with config:', {
+  projectId: firebaseConfig.projectId,
+  storageBucket: firebaseConfig.storageBucket,
+  authDomain: firebaseConfig.authDomain
+});
+
 export { auth, db, storage }; 

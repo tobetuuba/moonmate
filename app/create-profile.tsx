@@ -20,6 +20,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ProfileService, UserProfile } from '../services/api/ProfileService';
 import PersonalitySlider from '../components/PersonalitySlider';
+import { auth } from '../services/firebase';
+import { uploadProfilePhoto, uploadGalleryPhoto } from '../services/StorageService';
 
 interface FormData {
   displayName: string;
@@ -81,6 +83,7 @@ const COUNTRIES = [
 ];
 
 export default function CreateProfileScreen() {
+  const [isEditMode, setIsEditMode] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     displayName: '',
     birthDate: '',
@@ -137,7 +140,52 @@ export default function CreateProfileScreen() {
         useNativeDriver: true,
       }),
     ]).start();
+
+    // Load existing profile data if available
+    loadExistingProfile();
   }, []);
+
+  const loadExistingProfile = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const existingProfile = await ProfileService.getUserProfile(user.uid);
+      if (existingProfile) {
+        console.log('Loading existing profile:', existingProfile);
+        setIsEditMode(true);
+        setFormData({
+          displayName: existingProfile.displayName || '',
+          birthDate: existingProfile.birthDate || '',
+          birthTime: existingProfile.birthTime || '',
+          birthPlace: existingProfile.birthPlace || {
+            city: '',
+            country: '',
+            latitude: 0,
+            longitude: 0,
+          },
+          gender: existingProfile.gender || '',
+          seeking: existingProfile.seeking || [],
+          bio: existingProfile.bio || '',
+          relationshipGoals: existingProfile.relationshipGoals || [],
+          personality: existingProfile.personality || {
+            empathy: 50,
+            openness: 50,
+          },
+          profilePhotoUrl: existingProfile.profilePhotoUrl || '',
+          photos: existingProfile.photos || [],
+          location: existingProfile.location || {
+            city: '',
+            country: '',
+            latitude: 0,
+            longitude: 0,
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Error loading existing profile:', error);
+    }
+  };
 
   const updateFormData = (field: keyof FormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -147,7 +195,7 @@ export default function CreateProfileScreen() {
     setFormData(prev => ({
       ...prev,
       [parentField]: {
-        ...prev[parentField],
+        ...(prev[parentField] as any),
         [childField]: value,
       },
     }));
@@ -199,20 +247,24 @@ export default function CreateProfileScreen() {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.7, // Reduced quality for better upload performance
+        quality: 0.8, // Slightly higher quality
         allowsMultipleSelection: false,
       });
 
       if (!result.canceled && result.assets[0]) {
         const imageUri = result.assets[0].uri;
         console.log('Selected image URI:', imageUri);
+        console.log('Image type:', result.assets[0].type);
+        console.log('Image size:', result.assets[0].fileSize, 'bytes');
         
         // Show loading indicator
         Alert.alert('Uploading...', 'Please wait while we upload your image.');
         
         try {
           if (isProfilePhoto) {
-            const downloadURL = await ProfileService.uploadProfilePhoto(imageUri);
+            console.log('Uploading profile photo...');
+            const downloadURL = await uploadProfilePhoto(imageUri);
+            console.log('Profile photo upload successful:', downloadURL);
             updateFormData('profilePhotoUrl', downloadURL);
             Alert.alert('Success', 'Profile photo uploaded successfully!');
           } else {
@@ -220,7 +272,9 @@ export default function CreateProfileScreen() {
               Alert.alert('Maximum photos reached', 'You can only upload up to 5 photos.');
               return;
             }
-            const downloadURL = await ProfileService.uploadGalleryPhoto(imageUri);
+            console.log('Uploading gallery photo...');
+            const downloadURL = await uploadGalleryPhoto(imageUri);
+            console.log('Gallery photo upload successful:', downloadURL);
             updateFormData('photos', [...formData.photos, downloadURL]);
             Alert.alert('Success', 'Gallery photo uploaded successfully!');
           }
@@ -296,12 +350,21 @@ export default function CreateProfileScreen() {
         location: finalLocation,
       };
 
-      await ProfileService.createUserProfile(profileData);
-      Alert.alert('Success', 'Profile created successfully!', [
-        { text: 'OK', onPress: () => router.replace('/(tabs)') }
-      ]);
+      if (isEditMode) {
+        // Update existing profile
+        await ProfileService.updateUserProfile(profileData);
+        Alert.alert('Success', 'Profile updated successfully!', [
+          { text: 'OK', onPress: () => router.back() }
+        ]);
+      } else {
+        // Create new profile
+        await ProfileService.createUserProfile(profileData);
+        Alert.alert('Success', 'Profile created successfully!', [
+          { text: 'OK', onPress: () => router.replace('/(tabs)') }
+        ]);
+      }
     } catch (error) {
-      Alert.alert('Error', 'Failed to create profile. Please try again.');
+      Alert.alert('Error', `Failed to ${isEditMode ? 'update' : 'create'} profile. Please try again.`);
     } finally {
       setIsSubmitting(false);
     }
@@ -330,349 +393,354 @@ export default function CreateProfileScreen() {
 
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
-        style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        keyboardShouldPersistTaps="handled"
       >
-        <LinearGradient
-          colors={['#FF6B9D', '#C44569', '#8B5FBF']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.headerGradient, { width: '100%' }]}
-        >
-          <View style={styles.header}>
-            <TouchableOpacity 
-              style={styles.backButton}
-              onPress={() => router.back()}
-            >
-              <Ionicons name="arrow-back" size={24} color="#fff" />
-            </TouchableOpacity>
-            <View style={styles.headerContent}>
-              <Text style={styles.title}>✨ Create Your Profile ✨</Text>
-              <Text style={styles.subtitle}>Let's make your profile shine! 🌟</Text>
-            </View>
-          </View>
-        </LinearGradient>
-
-        <Animated.View
-          style={[
-            styles.scrollContainer,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            },
-          ]}
-        >
-          <ScrollView 
-            ref={scrollViewRef}
-            style={styles.scrollView}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
+        <View style={{ flex: 1 }}>
+          <LinearGradient
+            colors={['#FF6B9D', '#C44569', '#8B5FBF']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.headerGradient}
           >
-          {/* Display Name */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="person-circle" size={24} color="#FF6B9D" />
-              <Text style={styles.sectionTitle}>Display Name *</Text>
+            <View style={styles.header}>
+              <TouchableOpacity 
+                style={styles.backButton}
+                onPress={() => router.back()}
+              >
+                <Ionicons name="arrow-back" size={24} color="#fff" />
+              </TouchableOpacity>
+              <View style={styles.headerContent}>
+                <Text style={styles.title}>
+                  {isEditMode ? '✨ Edit Your Profile ✨' : '✨ Create Your Profile ✨'}
+                </Text>
+                <Text style={styles.subtitle}>
+                  {isEditMode ? 'Update your profile information! 🌟' : 'Let\'s make your profile shine! 🌟'}
+                </Text>
+              </View>
             </View>
-            <TextInput
-              style={styles.textInput}
-              value={formData.displayName}
-              onChangeText={(text) => updateFormData('displayName', text)}
-              placeholder="✨ What should we call you?"
-              maxLength={50}
-            />
-          </View>
+          </LinearGradient>
 
-          {/* Birth Date */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="calendar" size={24} color="#C44569" />
-              <Text style={styles.sectionTitle}>Birth Date *</Text>
+          <Animated.View
+            style={[
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
+          >
+            {/* Display Name */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="person-circle" size={24} color="#FF6B9D" />
+                <Text style={styles.sectionTitle}>Display Name *</Text>
+              </View>
+              <TextInput
+                style={styles.textInput}
+                value={formData.displayName}
+                onChangeText={(text) => updateFormData('displayName', text)}
+                placeholder="✨ What should we call you?"
+                maxLength={50}
+              />
             </View>
-            <TouchableOpacity
-              style={styles.dateButton}
-              onPress={() => {
-                // If we have a birth date, parse it and set as selected date
-                if (formData.birthDate) {
-                  const [year, month, day] = formData.birthDate.split('-').map(Number);
-                  // Create date in local timezone to avoid timezone issues
-                  const date = new Date(year, month - 1, day, 12, 0, 0); // Use noon to avoid timezone edge cases
-                  setSelectedDate(date);
-                  setTempSelectedDate(date);
-                } else {
-                  setTempSelectedDate(selectedDate);
-                }
-                setShowDatePicker(true);
-              }}
-            >
-              <Text style={styles.dateButtonText}>
-                {formData.birthDate || '🎂 When were you born?'}
-              </Text>
-              <Ionicons name="calendar-outline" size={20} color="#8B5FBF" />
-            </TouchableOpacity>
-          </View>
 
-          {/* Birth Time */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="time" size={24} color="#8B5FBF" />
-              <Text style={styles.sectionTitle}>Birth Time (Optional)</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.dateButton}
-              onPress={() => {
-                // Always start with current time for better UX
-                const currentTime = new Date();
-                setSelectedTime(currentTime);
-                setTempSelectedTime(currentTime);
-                setShowTimePicker(true);
-              }}
-            >
-              <Text style={styles.dateButtonText}>
-                {formData.birthTime || '⏰ What time were you born?'}
-              </Text>
-              <Ionicons name="time-outline" size={20} color="#8B5FBF" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Birth Place */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="globe" size={24} color="#FF6B9D" />
-              <Text style={styles.sectionTitle}>Birth Place</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.dateButton}
-              onPress={() => setShowCountryPicker(true)}
-            >
-              <Text style={styles.dateButtonText}>
-                {formData.birthPlace.country || '🌍 Where were you born?'}
-              </Text>
-              <Ionicons name="globe-outline" size={20} color="#8B5FBF" />
-            </TouchableOpacity>
-            {formData.birthPlace.country && (
+            {/* Birth Date */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="calendar" size={24} color="#C44569" />
+                <Text style={styles.sectionTitle}>Birth Date *</Text>
+              </View>
               <TouchableOpacity
-                style={[styles.dateButton, styles.cityButton]}
-                onPress={() => setShowCityPicker(true)}
+                style={styles.dateButton}
+                onPress={() => {
+                  // If we have a birth date, parse it and set as selected date
+                  if (formData.birthDate) {
+                    const [year, month, day] = formData.birthDate.split('-').map(Number);
+                    // Create date in local timezone to avoid timezone issues
+                    const date = new Date(year, month - 1, day, 12, 0, 0); // Use noon to avoid timezone edge cases
+                    setSelectedDate(date);
+                    setTempSelectedDate(date);
+                  } else {
+                    setTempSelectedDate(selectedDate);
+                  }
+                  setShowDatePicker(true);
+                }}
               >
                 <Text style={styles.dateButtonText}>
-                  {formData.birthPlace.city || '🏙️ Which city?'}
+                  {formData.birthDate || '🎂 When were you born?'}
+                </Text>
+                <Ionicons name="calendar-outline" size={20} color="#8B5FBF" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Birth Time */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="time" size={24} color="#8B5FBF" />
+                <Text style={styles.sectionTitle}>Birth Time (Optional)</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.dateButton}
+                onPress={() => {
+                  // Always start with a fresh time
+                  const freshTime = new Date();
+                  freshTime.setHours(12, 30, 0, 0); // Default to 12:30 PM
+                  setSelectedTime(freshTime);
+                  setTempSelectedTime(freshTime);
+                  setShowTimePicker(true);
+                }}
+              >
+                <Text style={styles.dateButtonText}>
+                  {formData.birthTime || '⏰ What time were you born?'}
+                </Text>
+                <Ionicons name="time-outline" size={20} color="#8B5FBF" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Birth Place */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="globe" size={24} color="#FF6B9D" />
+                <Text style={styles.sectionTitle}>Birth Place</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.dateButton}
+                onPress={() => setShowCountryPicker(true)}
+              >
+                <Text style={styles.dateButtonText}>
+                  {formData.birthPlace.country || '🌍 Where were you born?'}
+                </Text>
+                <Ionicons name="globe-outline" size={20} color="#8B5FBF" />
+              </TouchableOpacity>
+              {formData.birthPlace.country && (
+                <TouchableOpacity
+                  style={[styles.dateButton, styles.cityButton]}
+                  onPress={() => setShowCityPicker(true)}
+                >
+                  <Text style={styles.dateButtonText}>
+                    {formData.birthPlace.city || '🏙️ Which city?'}
+                  </Text>
+                  <Ionicons name="location-outline" size={20} color="#8B5FBF" />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Gender */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="heart" size={24} color="#C44569" />
+                <Text style={styles.sectionTitle}>Gender *</Text>
+              </View>
+              <View style={styles.optionsContainer}>
+                {GENDER_OPTIONS.map((option) => (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[
+                      styles.optionButton,
+                      formData.gender === option.value && styles.optionButtonSelected,
+                    ]}
+                    onPress={() => updateFormData('gender', option.value)}
+                  >
+                    <Text style={[
+                      styles.optionButtonText,
+                      formData.gender === option.value && styles.optionButtonTextSelected,
+                    ]}>
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Seeking */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="search" size={24} color="#8B5FBF" />
+                <Text style={styles.sectionTitle}>Seeking *</Text>
+              </View>
+              <View style={styles.optionsContainer}>
+                {SEEKING_OPTIONS.map((option) => (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[
+                      styles.optionButton,
+                      formData.seeking.includes(option.value) && styles.optionButtonSelected,
+                    ]}
+                    onPress={() => toggleSeeking(option.value)}
+                  >
+                    <Text style={[
+                      styles.optionButtonText,
+                      formData.seeking.includes(option.value) && styles.optionButtonTextSelected,
+                    ]}>
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Bio */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="chatbubble-ellipses" size={24} color="#FF6B9D" />
+                <Text style={styles.sectionTitle}>Bio (Optional)</Text>
+              </View>
+              <TextInput
+                style={[styles.textInput, styles.textArea]}
+                value={formData.bio}
+                onChangeText={(text) => updateFormData('bio', text)}
+                placeholder="💬 Tell us your story... What makes you unique?"
+                multiline
+                numberOfLines={4}
+                maxLength={500}
+              />
+            </View>
+
+            {/* Relationship Goals */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="star" size={24} color="#C44569" />
+                <Text style={styles.sectionTitle}>Relationship Goals</Text>
+              </View>
+              <View style={styles.optionsContainer}>
+                {RELATIONSHIP_GOALS.map((goal) => (
+                  <TouchableOpacity
+                    key={goal.value}
+                    style={[
+                      styles.optionButton,
+                      formData.relationshipGoals.includes(goal.value) && styles.optionButtonSelected,
+                    ]}
+                    onPress={() => toggleRelationshipGoal(goal.value)}
+                  >
+                    <Text style={[
+                      styles.optionButtonText,
+                      formData.relationshipGoals.includes(goal.value) && styles.optionButtonTextSelected,
+                    ]}>
+                      {goal.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Personality */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="bulb" size={24} color="#8B5FBF" />
+                <Text style={styles.sectionTitle}>Personality</Text>
+              </View>
+              
+              <PersonalitySlider
+                label="Empathy"
+                value={formData.personality.empathy}
+                onValueChange={(value) => handleSliderChange('empathy', value)}
+              />
+
+              <PersonalitySlider
+                label="Openness"
+                value={formData.personality.openness}
+                onValueChange={(value) => handleSliderChange('openness', value)}
+              />
+            </View>
+
+            {/* Profile Photo */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="camera" size={24} color="#FF6B9D" />
+                <Text style={styles.sectionTitle}>Profile Photo *</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.photoUploadButton}
+                onPress={() => handleImagePicker(true)}
+              >
+                {formData.profilePhotoUrl ? (
+                  <Image source={{ uri: formData.profilePhotoUrl }} style={styles.profilePhoto} />
+                ) : (
+                  <View style={styles.photoPlaceholder}>
+                    <Ionicons name="camera-outline" size={40} color="#8B5FBF" />
+                    <Text style={styles.photoPlaceholderText}>📸 Add Your Best Photo!</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {/* Gallery Photos */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="images" size={24} color="#C44569" />
+                <Text style={styles.sectionTitle}>Gallery Photos (Max 5)</Text>
+              </View>
+              <View style={styles.galleryContainer}>
+                {formData.photos.map((photo, index) => (
+                  <View key={index} style={styles.galleryPhotoContainer}>
+                    <Image source={{ uri: photo }} style={styles.galleryPhoto} />
+                    <TouchableOpacity
+                      style={styles.removePhotoButton}
+                      onPress={() => removePhoto(index)}
+                    >
+                      <Ionicons name="close-circle" size={24} color="#ff4444" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+                {formData.photos.length < 5 && (
+                  <TouchableOpacity
+                    style={styles.addPhotoButton}
+                    onPress={() => handleImagePicker(false)}
+                  >
+                    <Ionicons name="add" size={30} color="#8B5FBF" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            {/* Location */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="location" size={24} color="#8B5FBF" />
+                <Text style={styles.sectionTitle}>Current Location (Optional)</Text>
+              </View>
+              <Text style={styles.locationNote}>
+                🌍 Will default to birth place if not specified
+              </Text>
+              <TouchableOpacity
+                style={styles.dateButton}
+                onPress={() => {
+                  // For demo, copy birth place to location
+                  updateFormData('location', { ...formData.birthPlace });
+                  Alert.alert('Location Set', 'Using birth place as current location');
+                }}
+              >
+                <Text style={styles.dateButtonText}>
+                  📍 Use Birth Place as Location
                 </Text>
                 <Ionicons name="location-outline" size={20} color="#8B5FBF" />
               </TouchableOpacity>
-            )}
-          </View>
+            </View>
 
-          {/* Gender */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="heart" size={24} color="#C44569" />
-              <Text style={styles.sectionTitle}>Gender *</Text>
-            </View>
-            <View style={styles.optionsContainer}>
-              {GENDER_OPTIONS.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    styles.optionButton,
-                    formData.gender === option.value && styles.optionButtonSelected,
-                  ]}
-                  onPress={() => updateFormData('gender', option.value)}
-                >
-                  <Text style={[
-                    styles.optionButtonText,
-                    formData.gender === option.value && styles.optionButtonTextSelected,
-                  ]}>
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Seeking */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="search" size={24} color="#8B5FBF" />
-              <Text style={styles.sectionTitle}>Seeking *</Text>
-            </View>
-            <View style={styles.optionsContainer}>
-              {SEEKING_OPTIONS.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    styles.optionButton,
-                    formData.seeking.includes(option.value) && styles.optionButtonSelected,
-                  ]}
-                  onPress={() => toggleSeeking(option.value)}
-                >
-                  <Text style={[
-                    styles.optionButtonText,
-                    formData.seeking.includes(option.value) && styles.optionButtonTextSelected,
-                  ]}>
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Bio */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="chatbubble-ellipses" size={24} color="#FF6B9D" />
-              <Text style={styles.sectionTitle}>Bio (Optional)</Text>
-            </View>
-            <TextInput
-              style={[styles.textInput, styles.textArea]}
-              value={formData.bio}
-              onChangeText={(text) => updateFormData('bio', text)}
-              placeholder="💬 Tell us your story... What makes you unique?"
-              multiline
-              numberOfLines={4}
-              maxLength={500}
-            />
-          </View>
-
-          {/* Relationship Goals */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="star" size={24} color="#C44569" />
-              <Text style={styles.sectionTitle}>Relationship Goals</Text>
-            </View>
-            <View style={styles.optionsContainer}>
-              {RELATIONSHIP_GOALS.map((goal) => (
-                <TouchableOpacity
-                  key={goal.value}
-                  style={[
-                    styles.optionButton,
-                    formData.relationshipGoals.includes(goal.value) && styles.optionButtonSelected,
-                  ]}
-                  onPress={() => toggleRelationshipGoal(goal.value)}
-                >
-                  <Text style={[
-                    styles.optionButtonText,
-                    formData.relationshipGoals.includes(goal.value) && styles.optionButtonTextSelected,
-                  ]}>
-                    {goal.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Personality */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="brain" size={24} color="#8B5FBF" />
-              <Text style={styles.sectionTitle}>Personality</Text>
-            </View>
-            
-            <PersonalitySlider
-              label="Empathy"
-              value={formData.personality.empathy}
-              onValueChange={(value) => handleSliderChange('empathy', value)}
-            />
-
-            <PersonalitySlider
-              label="Openness"
-              value={formData.personality.openness}
-              onValueChange={(value) => handleSliderChange('openness', value)}
-            />
-          </View>
-
-          {/* Profile Photo */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="camera" size={24} color="#FF6B9D" />
-              <Text style={styles.sectionTitle}>Profile Photo *</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.photoUploadButton}
-              onPress={() => handleImagePicker(true)}
-            >
-              {formData.profilePhotoUrl ? (
-                <Image source={{ uri: formData.profilePhotoUrl }} style={styles.profilePhoto} />
-              ) : (
-                <View style={styles.photoPlaceholder}>
-                  <Ionicons name="camera-outline" size={40} color="#8B5FBF" />
-                  <Text style={styles.photoPlaceholderText}>📸 Add Your Best Photo!</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          {/* Gallery Photos */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="images" size={24} color="#C44569" />
-              <Text style={styles.sectionTitle}>Gallery Photos (Max 5)</Text>
-            </View>
-            <View style={styles.galleryContainer}>
-              {formData.photos.map((photo, index) => (
-                <View key={index} style={styles.galleryPhotoContainer}>
-                  <Image source={{ uri: photo }} style={styles.galleryPhoto} />
-                  <TouchableOpacity
-                    style={styles.removePhotoButton}
-                    onPress={() => removePhoto(index)}
-                  >
-                    <Ionicons name="close-circle" size={24} color="#ff4444" />
-                  </TouchableOpacity>
-                </View>
-              ))}
-              {formData.photos.length < 5 && (
-                <TouchableOpacity
-                  style={styles.addPhotoButton}
-                  onPress={() => handleImagePicker(false)}
-                >
-                  <Ionicons name="add" size={30} color="#8B5FBF" />
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-
-          {/* Location */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="location" size={24} color="#8B5FBF" />
-              <Text style={styles.sectionTitle}>Current Location (Optional)</Text>
-            </View>
-            <Text style={styles.locationNote}>
-              🌍 Will default to birth place if not specified
-            </Text>
-            <TouchableOpacity
-              style={styles.dateButton}
-              onPress={() => {
-                // For demo, copy birth place to location
-                updateFormData('location', { ...formData.birthPlace });
-                Alert.alert('Location Set', 'Using birth place as current location');
-              }}
-            >
-              <Text style={styles.dateButtonText}>
-                📍 Use Birth Place as Location
-              </Text>
-              <Ionicons name="location-outline" size={20} color="#8B5FBF" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Debug Section - Remove in production */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="bug" size={24} color="#FF6B9D" />
-              <Text style={styles.sectionTitle}>Debug Tools</Text>
-            </View>
-            <TouchableOpacity
+            {/* Debug Section - Remove in production */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="bug" size={24} color="#FF6B9D" />
+                <Text style={styles.sectionTitle}>Debug Tools</Text>
+              </View>
+                          <TouchableOpacity
               style={styles.dateButton}
               onPress={async () => {
                 try {
+                  console.log('Testing Firebase Storage connection...');
                   const isConnected = await ProfileService.testStorageConnection();
+                  console.log('Test result:', isConnected);
                   Alert.alert(
                     'Storage Test', 
                     isConnected ? '✅ Firebase Storage connection successful!' : '❌ Firebase Storage connection failed!'
                   );
                 } catch (error) {
+                  console.error('Storage test error:', error);
                   Alert.alert('Test Error', error instanceof Error ? error.message : 'Unknown error');
                 }
               }}
@@ -682,213 +750,264 @@ export default function CreateProfileScreen() {
               </Text>
               <Ionicons name="settings-outline" size={20} color="#8B5FBF" />
             </TouchableOpacity>
-          </View>
-          </ScrollView>
-        </Animated.View>
-
-        {/* Submit Button */}
-        <View style={styles.submitContainer}>
-          <TouchableOpacity
-            style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
-            onPress={handleSubmit}
-            disabled={isSubmitting}
-          >
-            <LinearGradient
-              colors={['#FF6B9D', '#C44569', '#8B5FBF']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.submitButtonGradient}
-            >
-              <Text style={styles.submitButtonText}>
-                {isSubmitting ? '✨ Creating Profile...' : '🚀 Create Profile'}
-              </Text>
-            </LinearGradient>
-          </TouchableOpacity>
+            </View>
+          </Animated.View>
         </View>
+      </ScrollView>
 
-        {/* Date Picker */}
-        {showDatePicker && (
-          <>
-            {Platform.OS === 'ios' ? (
-              <View style={styles.pickerOverlay}>
-                <View style={styles.pickerContainer}>
-                  <View style={styles.pickerHeader}>
-                    <Text style={styles.pickerTitle}>Select Birth Date</Text>
+      {/* Submit Button */}
+      <View style={styles.submitContainer}>
+        <TouchableOpacity
+          style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+          onPress={handleSubmit}
+          disabled={isSubmitting}
+        >
+          <LinearGradient
+            colors={['#FF6B9D', '#C44569', '#8B5FBF']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.submitButtonGradient}
+          >
+                          <Text style={styles.submitButtonText}>
+                {isSubmitting 
+                  ? (isEditMode ? '✨ Updating Profile...' : '✨ Creating Profile...')
+                  : (isEditMode ? '🚀 Update Profile' : '🚀 Create Profile')
+                }
+              </Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
+
+      {/* Date Picker */}
+      {showDatePicker && (
+        <>
+          {Platform.OS === 'ios' ? (
+            <View style={styles.pickerOverlay}>
+              <View style={styles.pickerContainer}>
+                <View style={styles.pickerHeader}>
+                  <Text style={styles.pickerTitle}>Select Birth Date</Text>
+                  <TouchableOpacity
+                    style={styles.pickerCloseButton}
+                    onPress={() => setShowDatePicker(false)}
+                  >
+                    <Ionicons name="close" size={24} color="#FF6B9D" />
+                  </TouchableOpacity>
+                </View>
+                <DateTimePicker
+                  value={tempSelectedDate}
+                  mode="date"
+                  display="spinner"
+                  onChange={handleDateChange}
+                  maximumDate={new Date()}
+                  style={styles.dateTimePicker}
+                />
+                <View style={styles.pickerButtonContainer}>
+                  <TouchableOpacity
+                    style={styles.pickerCancelButton}
+                    onPress={() => setShowDatePicker(false)}
+                  >
+                    <Text style={styles.pickerCancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.pickerConfirmButton}
+                    onPress={handleDateConfirm}
+                  >
+                    <Text style={styles.pickerConfirmButtonText}>OK</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          ) : (
+            <DateTimePicker
+              value={selectedDate}
+              mode="date"
+              display="default"
+              onChange={(event, selectedDate) => {
+                setShowDatePicker(false);
+                if (selectedDate) {
+                  setSelectedDate(selectedDate);
+                  // Fix timezone issue by using local date formatting
+                  const year = selectedDate.getFullYear();
+                  const month = (selectedDate.getMonth() + 1).toString().padStart(2, '0');
+                  const day = selectedDate.getDate().toString().padStart(2, '0');
+                  const formattedDate = `${year}-${month}-${day}`;
+                  updateFormData('birthDate', formattedDate);
+                }
+              }}
+              maximumDate={new Date()}
+            />
+          )}
+        </>
+      )}
+
+      {/* Time Picker */}
+      {showTimePicker && (
+        <>
+          {Platform.OS === 'ios' ? (
+            <View style={styles.pickerOverlay}>
+              <View style={styles.pickerContainer}>
+                <View style={styles.pickerHeader}>
+                  <Text style={styles.pickerTitle}>Select Birth Time</Text>
+                  <TouchableOpacity
+                    style={styles.pickerCloseButton}
+                    onPress={() => setShowTimePicker(false)}
+                  >
+                    <Ionicons name="close" size={24} color="#FF6B9D" />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.timePickerContainer}>
+                  <Text style={styles.timePickerLabel}>Select Time:</Text>
+                  <View style={styles.timeInputRow}>
                     <TouchableOpacity
-                      style={styles.pickerCloseButton}
-                      onPress={() => setShowDatePicker(false)}
+                      style={styles.timeButton}
+                      onPress={() => {
+                        const hours = (tempSelectedTime.getHours() + 1) % 24;
+                        const newTime = new Date(tempSelectedTime);
+                        newTime.setHours(hours);
+                        setTempSelectedTime(newTime);
+                      }}
                     >
-                      <Ionicons name="close" size={24} color="#FF6B9D" />
+                      <Text style={styles.timeButtonText}>+</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.timeDisplay}>
+                      {tempSelectedTime.getHours().toString().padStart(2, '0')}:{tempSelectedTime.getMinutes().toString().padStart(2, '0')}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.timeButton}
+                      onPress={() => {
+                        const hours = (tempSelectedTime.getHours() - 1 + 24) % 24;
+                        const newTime = new Date(tempSelectedTime);
+                        newTime.setHours(hours);
+                        setTempSelectedTime(newTime);
+                      }}
+                    >
+                      <Text style={styles.timeButtonText}>-</Text>
                     </TouchableOpacity>
                   </View>
-                  <DateTimePicker
-                    value={tempSelectedDate}
-                    mode="date"
-                    display="spinner"
-                    onChange={handleDateChange}
-                    maximumDate={new Date()}
-                    style={styles.dateTimePicker}
-                  />
-                  <View style={styles.pickerButtonContainer}>
+                  <View style={styles.timeInputRow}>
                     <TouchableOpacity
-                      style={styles.pickerCancelButton}
-                      onPress={() => setShowDatePicker(false)}
+                      style={styles.timeButton}
+                      onPress={() => {
+                        const minutes = (tempSelectedTime.getMinutes() + 15) % 60;
+                        const newTime = new Date(tempSelectedTime);
+                        newTime.setMinutes(minutes);
+                        setTempSelectedTime(newTime);
+                      }}
                     >
-                      <Text style={styles.pickerCancelButtonText}>Cancel</Text>
+                      <Text style={styles.timeButtonText}>+15min</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={styles.pickerConfirmButton}
-                      onPress={handleDateConfirm}
+                      style={styles.timeButton}
+                      onPress={() => {
+                        const minutes = (tempSelectedTime.getMinutes() - 15 + 60) % 60;
+                        const newTime = new Date(tempSelectedTime);
+                        newTime.setMinutes(minutes);
+                        setTempSelectedTime(newTime);
+                      }}
                     >
-                      <Text style={styles.pickerConfirmButtonText}>OK</Text>
+                      <Text style={styles.timeButtonText}>-15min</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
-              </View>
-            ) : (
-              <DateTimePicker
-                value={selectedDate}
-                mode="date"
-                display="default"
-                onChange={(event, selectedDate) => {
-                  setShowDatePicker(false);
-                  if (selectedDate) {
-                    setSelectedDate(selectedDate);
-                    // Fix timezone issue by using local date formatting
-                    const year = selectedDate.getFullYear();
-                    const month = (selectedDate.getMonth() + 1).toString().padStart(2, '0');
-                    const day = selectedDate.getDate().toString().padStart(2, '0');
-                    const formattedDate = `${year}-${month}-${day}`;
-                    updateFormData('birthDate', formattedDate);
-                  }
-                }}
-                maximumDate={new Date()}
-              />
-            )}
-          </>
-        )}
-
-        {/* Time Picker */}
-        {showTimePicker && (
-          <>
-            {Platform.OS === 'ios' ? (
-              <View style={styles.pickerOverlay}>
-                <View style={styles.pickerContainer}>
-                  <View style={styles.pickerHeader}>
-                    <Text style={styles.pickerTitle}>Select Birth Time</Text>
-                    <TouchableOpacity
-                      style={styles.pickerCloseButton}
-                      onPress={() => setShowTimePicker(false)}
-                    >
-                      <Ionicons name="close" size={24} color="#FF6B9D" />
-                    </TouchableOpacity>
-                  </View>
-                  <DateTimePicker
-                    value={tempSelectedTime}
-                    mode="time"
-                    display="spinner"
-                    onChange={handleTimeChange}
-                    style={styles.dateTimePicker}
-                  />
-                  <View style={styles.pickerButtonContainer}>
-                    <TouchableOpacity
-                      style={styles.pickerCancelButton}
-                      onPress={() => setShowTimePicker(false)}
-                    >
-                      <Text style={styles.pickerCancelButtonText}>Cancel</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.pickerConfirmButton}
-                      onPress={handleTimeConfirm}
-                    >
-                      <Text style={styles.pickerConfirmButtonText}>OK</Text>
-                    </TouchableOpacity>
-                  </View>
+                <View style={styles.pickerButtonContainer}>
+                  <TouchableOpacity
+                    style={styles.pickerCancelButton}
+                    onPress={() => setShowTimePicker(false)}
+                  >
+                    <Text style={styles.pickerCancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.pickerConfirmButton}
+                    onPress={handleTimeConfirm}
+                  >
+                    <Text style={styles.pickerConfirmButtonText}>OK</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
-            ) : (
-              <DateTimePicker
-                value={selectedTime}
-                mode="time"
-                display="default"
-                onChange={(event, selectedTime) => {
-                  setShowTimePicker(false);
-                  if (selectedTime) {
-                    setSelectedTime(selectedTime);
-                    const hours = selectedTime.getHours().toString().padStart(2, '0');
-                    const minutes = selectedTime.getMinutes().toString().padStart(2, '0');
-                    const timeString = `${hours}:${minutes}`;
-                    updateFormData('birthTime', timeString);
-                  }
-                }}
-              />
-            )}
-          </>
-        )}
-
-        {/* Country Picker Modal */}
-        {showCountryPicker && (
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Select Country</Text>
-              <ScrollView style={styles.modalScrollView}>
-                {COUNTRIES.map((country) => (
-                  <TouchableOpacity
-                    key={country.name}
-                    style={styles.modalOption}
-                    onPress={() => {
-                      updateNestedField('birthPlace', 'country', country.name);
-                      updateNestedField('birthPlace', 'city', '');
-                      setShowCountryPicker(false);
-                    }}
-                  >
-                    <Text style={styles.modalOptionText}>{country.name}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setShowCountryPicker(false)}
-              >
-                <Text style={styles.modalCloseButtonText}>Cancel</Text>
-              </TouchableOpacity>
             </View>
-          </View>
-        )}
+          ) : (
+            <DateTimePicker
+              value={tempSelectedTime}
+              mode="time"
+              display="default"
+              onChange={(event, selectedTime) => {
+                setShowTimePicker(false);
+                if (selectedTime) {
+                  setSelectedTime(selectedTime);
+                  setTempSelectedTime(selectedTime);
+                  const hours = selectedTime.getHours().toString().padStart(2, '0');
+                  const minutes = selectedTime.getMinutes().toString().padStart(2, '0');
+                  const timeString = `${hours}:${minutes}`;
+                  updateFormData('birthTime', timeString);
+                }
+              }}
+            />
+          )}
+        </>
+      )}
 
-        {/* City Picker Modal */}
-        {showCityPicker && (
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Select City</Text>
-              <ScrollView style={styles.modalScrollView}>
-                {COUNTRIES.find(c => c.name === formData.birthPlace.country)?.cities.map((city) => (
-                  <TouchableOpacity
-                    key={city}
-                    style={styles.modalOption}
-                    onPress={() => {
-                      updateNestedField('birthPlace', 'city', city);
-                      const coords = getMockCoordinates(city, formData.birthPlace.country);
-                      updateNestedField('birthPlace', 'latitude', coords.lat);
-                      updateNestedField('birthPlace', 'longitude', coords.lng);
-                      setShowCityPicker(false);
-                    }}
-                  >
-                    <Text style={styles.modalOptionText}>{city}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setShowCityPicker(false)}
-              >
-                <Text style={styles.modalCloseButtonText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
+      {/* Country Picker Modal */}
+      {showCountryPicker && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Country</Text>
+            <ScrollView style={styles.modalScrollView}>
+              {COUNTRIES.map((country) => (
+                <TouchableOpacity
+                  key={country.name}
+                  style={styles.modalOption}
+                  onPress={() => {
+                    updateNestedField('birthPlace', 'country', country.name);
+                    updateNestedField('birthPlace', 'city', '');
+                    setShowCountryPicker(false);
+                  }}
+                >
+                  <Text style={styles.modalOptionText}>{country.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setShowCountryPicker(false)}
+            >
+              <Text style={styles.modalCloseButtonText}>Cancel</Text>
+            </TouchableOpacity>
           </View>
-        )}
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </View>
+      )}
+
+      {/* City Picker Modal */}
+      {showCityPicker && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select City</Text>
+            <ScrollView style={styles.modalScrollView}>
+              {COUNTRIES.find(c => c.name === formData.birthPlace.country)?.cities.map((city) => (
+                <TouchableOpacity
+                  key={city}
+                  style={styles.modalOption}
+                  onPress={() => {
+                    updateNestedField('birthPlace', 'city', city);
+                    const coords = getMockCoordinates(city, formData.birthPlace.country);
+                    updateNestedField('birthPlace', 'latitude', coords.lat);
+                    updateNestedField('birthPlace', 'longitude', coords.lng);
+                    setShowCityPicker(false);
+                  }}
+                >
+                  <Text style={styles.modalOptionText}>{city}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setShowCityPicker(false)}
+            >
+              <Text style={styles.modalCloseButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+    </KeyboardAvoidingView>
   );
 }
 
@@ -897,14 +1016,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
+
   keyboardAvoidingView: {
     flex: 1,
   },
   headerGradient: {
-    paddingTop: 60,
-    paddingBottom: 40,
     width: '100%',
-    alignSelf: 'stretch',
+    paddingTop: 50,
+    paddingBottom: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
   },
   header: {
     alignItems: 'center',
@@ -912,7 +1035,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: 'absolute',
-    top: 20,
+    top: 10,
     left: 20,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 20,
@@ -921,7 +1044,7 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     alignItems: 'center',
-    marginTop: 40,
+    marginTop: 20,
   },
   title: {
     fontSize: 32,
@@ -942,13 +1065,12 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
-  scrollContainer: {
-    flex: 1,
-  },
   scrollView: {
     flex: 1,
   },
-  scrollContent: {
+  scrollContainer: {
+    flexGrow: 1,
+    minHeight: '100%',
     paddingBottom: 100,
   },
   section: {
@@ -1259,6 +1381,68 @@ const styles = StyleSheet.create({
   dateTimePicker: {
     height: 200,
     width: '100%',
+  },
+  timePickerContainer: {
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  timePickerLabel: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1a1a1a',
+    marginBottom: 15,
+  },
+  timeInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timeInput: {
+    borderWidth: 2,
+    borderColor: '#FF6B9D',
+    borderRadius: 12,
+    padding: 15,
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    width: 80,
+    backgroundColor: '#fff',
+    color: '#1a1a1a',
+  },
+  timeSeparator: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1a1a1a',
+    marginHorizontal: 10,
+  },
+  timeButton: {
+    backgroundColor: '#FF6B9D',
+    borderRadius: 25,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    marginHorizontal: 10,
+    shadowColor: '#FF6B9D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  timeButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  timeDisplay: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#1a1a1a',
+    marginHorizontal: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#FF6B9D',
   },
   pickerButtonContainer: {
     flexDirection: 'row',

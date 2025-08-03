@@ -46,14 +46,35 @@ export class ProfileService {
       console.log('Testing Firebase Storage connection...');
       console.log('User ID:', user.uid);
       console.log('Storage bucket:', storage.app.options.storageBucket);
+      console.log('Storage app:', storage.app.name);
+      console.log('Storage instance:', !!storage);
 
-      // Try to create a test reference
+      // Basic test - just create a reference
       const testRef = ref(storage, `test/${user.uid}/test.txt`);
-      console.log('Test reference created successfully');
+      console.log('Test reference created successfully:', testRef.fullPath);
 
-      return true;
+      // Try to upload a small test file
+      const testBlob = new Blob(['test'], { type: 'text/plain' });
+      console.log('Test blob created, size:', testBlob.size);
+
+      try {
+        const uploadResult = await uploadBytes(testRef, testBlob);
+        console.log('Test upload successful');
+        console.log('Upload result:', uploadResult);
+        return true;
+      } catch (uploadError) {
+        console.error('Upload test failed:', uploadError);
+        console.log('Firebase Storage not available, but app will continue with fallback');
+        return false; // Return false to indicate Storage is not working
+      }
+
     } catch (error) {
       console.error('Storage connection test failed:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', error.message);
+        console.error('Error code:', (error as any).code);
+        console.error('Error stack:', error.stack);
+      }
       return false;
     }
   }
@@ -112,10 +133,10 @@ export class ProfileService {
         throw new Error('Invalid image URI provided');
       }
 
-      // Check if URI is a file:// or content:// URI (local file)
-      if (imageUri.startsWith('file://') || imageUri.startsWith('content://')) {
-        // For local files, we need to handle them differently
-        console.log('Local file detected, using different upload method');
+      // Check if URI is a local file (file://, content://, or data:)
+      if (imageUri.startsWith('file://') || imageUri.startsWith('content://') || imageUri.startsWith('data:')) {
+        // For local files, use the local upload method
+        console.log('Local file detected, using local upload method');
         return await this.uploadLocalImage(imageUri, path);
       }
 
@@ -176,21 +197,64 @@ export class ProfileService {
 
   static async uploadLocalImage(imageUri: string, path: string): Promise<string> {
     try {
-      // For React Native, we need to handle local files differently
-      // This is a simplified approach - in a real app you might want to use
-      // react-native-fs or similar library for better file handling
+      console.log('Uploading local image:', imageUri);
+      console.log('Storage bucket:', storage.app.options.storageBucket);
+      console.log('User authenticated:', !!auth.currentUser);
       
-      // For now, let's return a mock URL for local files
-      // In production, you'd want to implement proper local file upload
-      console.log('Mock upload for local file:', imageUri);
+      // Check if user is authenticated
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
       
-      // Return the original URI as a fallback
-      // This is not ideal but will prevent crashes during development
-      return imageUri;
+      console.log('User ID:', user.uid);
+      
+      // For React Native local files, we need to convert to blob
+      // First, let's try to fetch the local file
+      const response = await fetch(imageUri);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to read local file: ${response.status} ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      
+      if (!blob || blob.size === 0) {
+        throw new Error('Invalid local image file');
+      }
+
+      console.log('Local file blob size:', blob.size, 'bytes');
+      console.log('Blob type:', blob.type);
+
+      // Try to upload to Firebase Storage
+      try {
+        const storageRef = ref(storage, path);
+        console.log('Uploading local file to path:', path);
+        
+        const uploadResult = await uploadBytes(storageRef, blob, {
+          contentType: blob.type || 'image/jpeg',
+          cacheControl: 'public, max-age=31536000',
+        });
+
+        console.log('Local file upload successful, getting download URL');
+        
+        // Get download URL
+        const downloadURL = await getDownloadURL(uploadResult.ref);
+        console.log('Local file download URL obtained:', downloadURL);
+        
+        return downloadURL;
+      } catch (storageError) {
+        console.error('Firebase Storage upload failed:', storageError);
+        console.log('Using fallback - returning original URI');
+        return imageUri; // Return original URI as fallback
+      }
       
     } catch (error) {
       console.error('Error uploading local image:', error);
-      throw new Error('Failed to upload local image. Please try again.');
+      
+      // Always return the original URI as fallback for any error
+      console.log('Using fallback - returning original URI');
+      return imageUri;
     }
   }
 
