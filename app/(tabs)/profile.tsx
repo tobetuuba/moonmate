@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Switch } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -7,16 +7,55 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { FontAwesome } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNotifications } from '../../context/NotificationContext';
+import { ProfileService } from '../../services/api/ProfileService';
+import { auth } from '../../services/firebase';
 
 export default function ProfileScreen() {
   const { hasPermission, requestPermission, sendTestNotification, scheduleDailyReminder, cancelAllNotifications } = useNotifications();
   const [aiInsightsEnabled, setAiInsightsEnabled] = useState(true);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Load user profile data
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      try {
+        const currentUser = auth.currentUser;
+        if (currentUser) {
+          const profile = await ProfileService.getUserProfile(currentUser.uid);
+          setUserProfile(profile);
+        }
+      } catch (error) {
+        console.error('Error loading user profile:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadUserProfile();
+  }, []);
+
+  // Calculate age from birth date
+  const calculateAge = (birthDate: string) => {
+    if (!birthDate) return 0;
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    
+    return age;
+  };
+
+  // Default user data if profile not loaded
   const user = {
-    name: 'You',
-    age: 28,
-    avatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=400',
-    bio: 'Looking for genuine connections and meaningful conversations. Love hiking, reading, and deep discussions about life.',
+    name: userProfile?.displayName || 'You',
+    age: userProfile?.birthDate ? calculateAge(userProfile.birthDate) : 28,
+    avatar: userProfile?.profilePhotoUrl || 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=400',
+    bio: userProfile?.bio || 'Looking for genuine connections and meaningful conversations. Love hiking, reading, and deep discussions about life.',
     personalityType: 'Empathetic Communicator',
     compatibilityScore: 92,
     interests: ['Reading', 'Hiking', 'Photography', 'Cooking', 'Travel', 'Music'],
@@ -31,7 +70,19 @@ export default function ProfileScreen() {
         style={styles.headerGradient}>
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
-            <Image source={{ uri: user.avatar }} style={styles.avatar} />
+            {user.avatar ? (
+              <Image 
+                source={{ uri: user.avatar }} 
+                style={styles.avatar}
+                onError={() => {
+                  console.log('Profile photo failed to load');
+                }}
+              />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Ionicons name="person" size={40} color="#8B5FBF" />
+              </View>
+            )}
             <TouchableOpacity style={styles.cameraButton}>
               <FontAwesome name="camera" size={16} color="#FFFFFF" />
             </TouchableOpacity>
@@ -193,6 +244,16 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     borderWidth: 4,
     borderColor: '#FFFFFF',
+  },
+  avatarPlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 4,
+    borderColor: '#FFFFFF',
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   cameraButton: {
     position: 'absolute',
