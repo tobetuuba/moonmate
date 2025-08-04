@@ -7,8 +7,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function HomeScreen() {
-  const navigateToSwipe = () => {
-    router.push('/swipe');
+  const navigateToVisualMatch = () => {
+    router.push('/visual-match');
   };
 
   const navigateToTest = () => {
@@ -41,7 +41,7 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.optionsContainer}>
-          <TouchableOpacity style={styles.optionCard} onPress={navigateToSwipe}>
+          <TouchableOpacity style={styles.optionCard} onPress={navigateToVisualMatch}>
             <LinearGradient
               colors={['#8B5FBF', '#A855F7']}
               style={styles.optionGradient}>
