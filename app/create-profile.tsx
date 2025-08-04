@@ -328,10 +328,6 @@ export default function CreateProfileScreen() {
       Alert.alert('Error', 'Please select who you are seeking');
       return false;
     }
-    if (!formData.profilePhotoUrl) {
-      Alert.alert('Error', 'Profile photo is required');
-      return false;
-    }
     return true;
   };
 
@@ -652,7 +648,7 @@ export default function CreateProfileScreen() {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Ionicons name="camera" size={24} color="#FF6B9D" />
-                <Text style={styles.sectionTitle}>Profile Photo *</Text>
+                <Text style={styles.sectionTitle}>Profile Photo (Optional)</Text>
               </View>
               <TouchableOpacity
                 style={styles.photoUploadButton}
