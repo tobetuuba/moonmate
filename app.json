@@ -55,6 +55,12 @@
         "projectId": "e3dbc035-a8c1-4451-8e7a-056a3d15c861"
       }
     },
-    "owner": "tobetuuba"
+    "owner": "tobetuuba",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/e3dbc035-a8c1-4451-8e7a-056a3d15c861"
+    }
   }
 }
