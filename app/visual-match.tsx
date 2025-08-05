@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import VisualMatchScreen from './VisualMatchScreen';
+import useSwipeActions from '../hooks/useSwipeActions';
+import { auth } from '../services/firebase';
 
 // Sample user data for demonstration
 const sampleUsers = [
@@ -52,20 +54,37 @@ const sampleUsers = [
 
 export default function VisualMatchPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const currentUserId = auth.currentUser?.uid;
   
-  const handleSwipeRight = (userId: string) => {
-    // Here you would typically:
-    // 1. Send like to your backend
-    // 2. Check if it's a mutual match
-    // 3. Show match notification if mutual
-    console.log('Liked user:', userId);
+  // Use the Firebase swipe actions hook
+  const { onSwipeRight, onSwipeLeft } = useSwipeActions(currentUserId || '');
+  
+  const handleSwipeRight = async (userId: string) => {
+    try {
+      if (!currentUserId) {
+        console.log('No current user ID, skipping Firebase write');
+        return;
+      }
+      
+      await onSwipeRight(userId);
+      console.log('✅ Like stored in Firebase for user:', userId);
+    } catch (error) {
+      console.error('❌ Failed to store like in Firebase:', error);
+    }
   };
 
-  const handleSwipeLeft = (userId: string) => {
-    // Here you would typically:
-    // 1. Send pass to your backend
-    // 2. Update user preferences
-    console.log('Passed on user:', userId);
+  const handleSwipeLeft = async (userId: string) => {
+    try {
+      if (!currentUserId) {
+        console.log('No current user ID, skipping Firebase write');
+        return;
+      }
+      
+      await onSwipeLeft(userId);
+      console.log('✅ Pass stored in Firebase for user:', userId);
+    } catch (error) {
+      console.error('❌ Failed to store pass in Firebase:', error);
+    }
   };
 
   return (
