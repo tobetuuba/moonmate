@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import VisualMatchScreen from './VisualMatchScreen';
+import MatchModal from '../components/MatchModal';
 import useSwipeActions from '../hooks/useSwipeActions';
 import { auth } from '../services/firebase';
 
@@ -54,10 +55,24 @@ const sampleUsers = [
 
 export default function VisualMatchPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [showMatchModal, setShowMatchModal] = useState(false);
+  const [matchedUserPhoto, setMatchedUserPhoto] = useState('');
   const currentUserId = auth.currentUser?.uid;
   
-  // Use the Firebase swipe actions hook
-  const { onSwipeRight, onSwipeLeft } = useSwipeActions(currentUserId || '');
+  // Get current user photo (first photo from sample data for demo)
+  const currentUserPhoto = sampleUsers[0]?.photos?.[0] || '';
+  
+  // Define the match handler
+  const handleMatch = (matchedUserId: string) => {
+    const matchedUser = sampleUsers.find(u => u.id === matchedUserId);
+    if (matchedUser) {
+      setMatchedUserPhoto(matchedUser.photos?.[0] || '');
+      setShowMatchModal(true);
+    }
+  };
+  
+  // Use the Firebase swipe actions hook with match callback
+  const { onSwipeRight, onSwipeLeft } = useSwipeActions(currentUserId || '', handleMatch);
   
   const handleSwipeRight = async (userId: string) => {
     try {
@@ -88,11 +103,24 @@ export default function VisualMatchPage() {
   };
 
   return (
-    <VisualMatchScreen
-      users={sampleUsers}
-      onSwipeRight={handleSwipeRight}
-      onSwipeLeft={handleSwipeLeft}
-      isLoading={isLoading}
-    />
+    <>
+      <VisualMatchScreen
+        users={sampleUsers}
+        onSwipeRight={handleSwipeRight}
+        onSwipeLeft={handleSwipeLeft}
+        isLoading={isLoading}
+      />
+      
+      <MatchModal
+        isVisible={showMatchModal}
+        onClose={() => setShowMatchModal(false)}
+        onStartChat={() => {
+          // TODO: Navigate to chat screen with matched user
+          console.log('Start chatting...');
+        }}
+        currentUserPhoto={currentUserPhoto}
+        matchedUserPhoto={matchedUserPhoto}
+      />
+    </>
   );
 } 
