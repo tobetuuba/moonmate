@@ -21,7 +21,7 @@ import Animated, {
 interface MatchModalProps {
   isVisible: boolean;
   onClose: () => void;
-  onStartChat: () => void;
+  onStartChat: (chatId?: string) => void;
   currentUserPhoto: string;
   matchedUserPhoto: string;
 }

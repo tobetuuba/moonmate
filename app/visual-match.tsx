@@ -3,6 +3,8 @@ import VisualMatchScreen from './VisualMatchScreen';
 import MatchModal from '../components/MatchModal';
 import useSwipeActions from '../hooks/useSwipeActions';
 import { auth } from '../services/firebase';
+import createOrGetChat from '../utils/createOrGetChat';
+import { useRouter } from 'expo-router';
 
 // Sample user data for demonstration
 const sampleUsers = [
@@ -54,9 +56,11 @@ const sampleUsers = [
 ];
 
 export default function VisualMatchPage() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchedUserPhoto, setMatchedUserPhoto] = useState('');
+  const [matchedUserId, setMatchedUserId] = useState('');
   const currentUserId = auth.currentUser?.uid;
   
   // Get current user photo (first photo from sample data for demo)
@@ -67,6 +71,7 @@ export default function VisualMatchPage() {
     const matchedUser = sampleUsers.find(u => u.id === matchedUserId);
     if (matchedUser) {
       setMatchedUserPhoto(matchedUser.photos?.[0] || '');
+      setMatchedUserId(matchedUserId);
       setShowMatchModal(true);
     }
   };
@@ -114,9 +119,29 @@ export default function VisualMatchPage() {
       <MatchModal
         isVisible={showMatchModal}
         onClose={() => setShowMatchModal(false)}
-        onStartChat={() => {
-          // TODO: Navigate to chat screen with matched user
-          console.log('Start chatting...');
+        onStartChat={async (chatId) => {
+          try {
+            if (!currentUserId || !matchedUserId) {
+              console.error('Missing user IDs for chat creation');
+              return;
+            }
+
+            console.log('💬 Creating chat between:', currentUserId, 'and', matchedUserId);
+            
+            // Create or get chat
+            const newChatId = await createOrGetChat(currentUserId, matchedUserId);
+            
+            console.log('✅ Chat created/retrieved:', newChatId);
+            
+            // Navigate to chat screen
+            router.push(`/chat/${newChatId}`);
+            
+            // Close the modal
+            setShowMatchModal(false);
+          } catch (error) {
+            console.error('❌ Error creating chat:', error);
+            // You could show an alert here if needed
+          }
         }}
         currentUserPhoto={currentUserPhoto}
         matchedUserPhoto={matchedUserPhoto}
