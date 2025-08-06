@@ -1,424 +1,421 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Switch } from 'react-native';
-import { router } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  Modal,
+  TextInput,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { MaterialIcons } from '@expo/vector-icons';
-import { FontAwesome } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useNotifications } from '../../context/NotificationContext';
-import { ProfileService } from '../../services/api/ProfileService';
-import { auth } from '../../services/firebase';
+import { colors } from '../../theme/colors';
+import { typography } from '../../theme/typography';
+import { spacing } from '../../theme/spacings';
+import { texts } from '../../constants/texts';
+import { features } from '../../constants/features';
+import ProfilePhotoCarousel from '../../components/ProfilePhotoCarousel';
+import InterestChips from '../../components/InterestChips';
+import LockedFeature from '../../components/LockedFeature';
+import SocialLink from '../../components/SocialLink';
+import Button from '../../components/Button';
+import Card from '../../components/Card';
+import useAuth from '../../hooks/useAuth';
+
+interface UserProfile {
+  id: string;
+  displayName: string;
+  age: number;
+  zodiacSign: string;
+  city: string;
+  profession?: string;
+  bio: string;
+  photos: string[];
+  interests: string[];
+  socialLinks: {
+    instagram?: string;
+    spotify?: string;
+  };
+}
 
 export default function ProfileScreen() {
-  const { hasPermission, requestPermission, sendTestNotification, scheduleDailyReminder, cancelAllNotifications } = useNotifications();
-  const [aiInsightsEnabled, setAiInsightsEnabled] = useState(true);
-  const [userProfile, setUserProfile] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, isAuthenticated } = useAuth();
+  const [isOwnProfile] = useState(true); // For now, always show own profile
+  const [isEditing, setIsEditing] = useState(false);
+  const [showBioModal, setShowBioModal] = useState(false);
+  const [bioText, setBioText] = useState('');
 
-  // Load user profile data
-  useEffect(() => {
-    const loadUserProfile = async () => {
-      try {
-        const currentUser = auth.currentUser;
-        if (currentUser) {
-          const profile = await ProfileService.getUserProfile(currentUser.uid);
-          setUserProfile(profile);
-        }
-      } catch (error) {
-        console.error('Error loading user profile:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // Mock user data - replace with real data from Firebase
+  const [userProfile, setUserProfile] = useState<UserProfile>({
+    id: user?.uid || '1',
+    displayName: user?.displayName || 'Sarah',
+    age: 25,
+    zodiacSign: 'Libra',
+    city: 'Istanbul',
+    profession: 'Software Engineer',
+    bio: 'Love exploring new places and trying different cuisines! 🌍🍕',
+    photos: [
+      'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg',
+      'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg',
+    ],
+    interests: ['music', 'travel', 'cooking'],
+    socialLinks: {
+      instagram: 'sarah_insta',
+      spotify: 'sarah_spotify',
+    },
+  });
 
-    loadUserProfile();
-  }, []);
-
-  // Calculate age from birth date
-  const calculateAge = (birthDate: string) => {
-    if (!birthDate) return 0;
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    
-    return age;
+  const handleAddPhoto = () => {
+    Alert.alert('Add Photo', 'Photo picker will be implemented here');
   };
 
-  // Default user data if profile not loaded
-  const user = {
-    name: userProfile?.displayName || 'You',
-    age: userProfile?.birthDate ? calculateAge(userProfile.birthDate) : 28,
-    avatar: userProfile?.profilePhotoUrl || 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=400',
-    bio: userProfile?.bio || 'Looking for genuine connections and meaningful conversations. Love hiking, reading, and deep discussions about life.',
-    personalityType: 'Empathetic Communicator',
-    compatibilityScore: 92,
-    interests: ['Reading', 'Hiking', 'Photography', 'Cooking', 'Travel', 'Music'],
+  const handlePhotoPress = (photoUrl: string, index: number) => {
+    console.log('Photo pressed:', photoUrl, index);
   };
+
+  const handleInterestToggle = (interestId: string) => {
+    setUserProfile(prev => ({
+      ...prev,
+      interests: prev.interests.includes(interestId)
+        ? prev.interests.filter(id => id !== interestId)
+        : [...prev.interests, interestId],
+    }));
+  };
+
+  const handleBioEdit = () => {
+    setBioText(userProfile.bio);
+    setShowBioModal(true);
+  };
+
+  const handleBioSave = () => {
+    setUserProfile(prev => ({ ...prev, bio: bioText }));
+    setShowBioModal(false);
+  };
+
+  const handleUpgrade = () => {
+    Alert.alert('Upgrade', 'Premium upgrade flow will be implemented here');
+  };
+
+  const handleSocialLinkPress = (platform: string) => {
+    Alert.alert(`${platform}`, `Opening ${platform} profile...`);
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.authMessage}>Please sign in to view your profile</Text>
+      </View>
+    );
+  }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <LinearGradient
-        colors={['#8B5FBF', '#E91E63']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.headerGradient}>
-        <View style={styles.profileHeader}>
-          <View style={styles.avatarContainer}>
-            {user.avatar ? (
-              <Image 
-                source={{ uri: user.avatar }} 
-                style={styles.avatar}
-                onError={() => {
-                  console.log('Profile photo failed to load');
-                }}
+    <View style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Profile</Text>
+          {isOwnProfile && (
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => setIsEditing(!isEditing)}
+            >
+              <Ionicons 
+                name={isEditing ? "checkmark" : "create-outline"} 
+                size={24} 
+                color={colors.primary[500]} 
               />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Ionicons name="person" size={40} color="#8B5FBF" />
-              </View>
-            )}
-            <TouchableOpacity style={styles.cameraButton}>
-              <FontAwesome name="camera" size={16} color="#FFFFFF" />
             </TouchableOpacity>
-          </View>
-          <Text style={styles.userName}>{user.name}, {user.age}</Text>
-          <TouchableOpacity 
-            style={styles.editButton}
-            onPress={() => router.push('/create-profile')}>
-            <MaterialIcons name="edit" size={16} color="#FFFFFF" />
-            <Text style={styles.editButtonText}>Edit Profile</Text>
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
-
-      <View style={styles.content}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About Me</Text>
-          <Text style={styles.bioText}>{user.bio}</Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>AI Personality Analysis</Text>
-          <View style={styles.personalityCard}>
-            <View style={styles.personalityHeader}>
-              <MaterialIcons name="psychology" size={24} color="#8B5FBF" />
-              <View>
-                <Text style={styles.personalityType}>{user.personalityType}</Text>
-                <Text style={styles.compatibilityText}>
-                  {user.compatibilityScore}% Average Compatibility
-                </Text>
-              </View>
-            </View>
-            <TouchableOpacity style={styles.viewInsightsButton}>
-              <Text style={styles.viewInsightsText}>View Full Analysis</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Interests</Text>
-          <View style={styles.interestsContainer}>
-            {user.interests.map((interest, index) => (
-              <View key={index} style={styles.interestTag}>
-                <Text style={styles.interestText}>{interest}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Birth Data</Text>
-          <TouchableOpacity 
-            style={styles.birthDataCard}
-            onPress={() => router.push('/birth-data')}>
-            <View style={styles.birthDataContent}>
-              <MaterialIcons name="cake" size={24} color="#8B5FBF" />
-              <View style={styles.birthDataInfo}>
-                <Text style={styles.birthDataTitle}>Astrological Profile</Text>
-                <Text style={styles.birthDataSubtitle}>Add your birth data for zodiac matching</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#8B5FBF" />
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Preferences</Text>
-          
-          <View style={styles.preferenceItem}>
-            <View style={styles.preferenceLeft}>
-              <Ionicons name="notifications" size={20} color="#E91E63" />
-              <Text style={styles.preferenceText}>Push Notifications</Text>
-            </View>
-            <Switch
-              value={hasPermission}
-              onValueChange={requestPermission}
-              trackColor={{ false: '#F3F4F6', true: '#8B5FBF' }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-
-          {hasPermission && (
-            <>
-              <TouchableOpacity style={styles.preferenceButton} onPress={sendTestNotification}>
-                <Ionicons name="flash" size={20} color="#8B5FBF" />
-                <Text style={styles.preferenceButtonText}>Send Test Notification</Text>
-                <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.preferenceButton} onPress={scheduleDailyReminder}>
-                <Ionicons name="time" size={20} color="#8B5FBF" />
-                <Text style={styles.preferenceButtonText}>Schedule Daily Reminder</Text>
-                <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.preferenceButton} onPress={cancelAllNotifications}>
-                <Ionicons name="close-circle" size={20} color="#EF4444" />
-                <Text style={styles.preferenceButtonText}>Cancel All Notifications</Text>
-                <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
-              </TouchableOpacity>
-            </>
           )}
-
-          <View style={styles.preferenceItem}>
-            <View style={styles.preferenceLeft}>
-              <MaterialIcons name="psychology" size={20} color="#8B5FBF" />
-              <Text style={styles.preferenceText}>AI Insights</Text>
-            </View>
-            <Switch
-              value={aiInsightsEnabled}
-              onValueChange={setAiInsightsEnabled}
-              trackColor={{ false: '#F3F4F6', true: '#8B5FBF' }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-
-          <TouchableOpacity style={styles.preferenceButton}>
-            <Feather name="settings" size={20} color="#6B7280" />
-            <Text style={styles.preferenceButtonText}>Advanced Settings</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.preferenceButton}
-            onPress={() => {
-              // In a real app, you'd clear user data/tokens here
-              router.replace('/login');
-            }}>
-            <MaterialIcons name="logout" size={20} color="#DC2626" />
-            <Text style={[styles.preferenceButtonText, { color: '#DC2626' }]}>
-              Sign Out
-            </Text>
-          </TouchableOpacity>
         </View>
-      </View>
-    </ScrollView>
+
+        {/* Photo Carousel */}
+        <ProfilePhotoCarousel
+          photos={userProfile.photos}
+          isOwnProfile={isOwnProfile}
+          onAddPhoto={handleAddPhoto}
+          onPhotoPress={handlePhotoPress}
+        />
+
+        {/* Basic Info */}
+        <Card variant="elevated" style={styles.basicInfoCard}>
+          <View style={styles.basicInfo}>
+            <Text style={styles.name}>{userProfile.displayName}</Text>
+            <Text style={styles.age}>{userProfile.age}</Text>
+            <Text style={styles.zodiacSign}>{userProfile.zodiacSign}</Text>
+          </View>
+          
+          <View style={styles.locationContainer}>
+            <Ionicons name="location" size={16} color={colors.text.tertiary} />
+            <Text style={styles.location}>{userProfile.city}</Text>
+          </View>
+          
+          {userProfile.profession && (
+            <View style={styles.professionContainer}>
+              <Ionicons name="briefcase" size={16} color={colors.text.tertiary} />
+              <Text style={styles.profession}>{userProfile.profession}</Text>
+            </View>
+          )}
+        </Card>
+
+        {/* Bio Section */}
+        <Card variant="elevated" style={styles.bioCard}>
+          <View style={styles.bioHeader}>
+            <Text style={styles.sectionTitle}>About Me</Text>
+            {isOwnProfile && isEditing && (
+              <TouchableOpacity onPress={handleBioEdit}>
+                <Ionicons name="create-outline" size={20} color={colors.primary[500]} />
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          <Text style={styles.bioText}>
+            {userProfile.bio || 'No bio yet...'}
+          </Text>
+        </Card>
+
+        {/* Interests */}
+        <Card variant="elevated" style={styles.interestsCard}>
+          <InterestChips
+            selectedInterests={userProfile.interests}
+            isEditable={isOwnProfile && isEditing}
+            onInterestToggle={handleInterestToggle}
+          />
+        </Card>
+
+        {/* Social Links */}
+        {(userProfile.socialLinks.instagram || userProfile.socialLinks.spotify) && (
+          <Card variant="elevated" style={styles.socialCard}>
+            <Text style={styles.sectionTitle}>Social</Text>
+            
+            <SocialLink
+              platform="instagram"
+              username={userProfile.socialLinks.instagram}
+              isConnected={!!userProfile.socialLinks.instagram}
+              onPress={() => handleSocialLinkPress('Instagram')}
+            />
+            
+            <SocialLink
+              platform="spotify"
+              username={userProfile.socialLinks.spotify}
+              isConnected={!!userProfile.socialLinks.spotify}
+              onPress={() => handleSocialLinkPress('Spotify')}
+            />
+          </Card>
+        )}
+
+        {/* Premium Features */}
+        <Card variant="elevated" style={styles.premiumCard}>
+          <Text style={styles.sectionTitle}>Premium Features</Text>
+          
+          <LockedFeature
+            title="Zodiac Match"
+            description="Find your perfect match based on astrological compatibility"
+            icon="star"
+            onUpgrade={handleUpgrade}
+          />
+          
+          <LockedFeature
+            title="Advanced Filters"
+            description="Filter by zodiac sign, age range, and more"
+            icon="funnel"
+            onUpgrade={handleUpgrade}
+          />
+          
+          <LockedFeature
+            title="Unlimited Likes"
+            description="No daily limit on likes and super likes"
+            icon="heart"
+            onUpgrade={handleUpgrade}
+          />
+        </Card>
+      </ScrollView>
+
+      {/* Bio Edit Modal */}
+      <Modal
+        visible={showBioModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowBioModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Bio</Text>
+              <TouchableOpacity onPress={() => setShowBioModal(false)}>
+                <Ionicons name="close" size={24} color={colors.text.primary} />
+              </TouchableOpacity>
+            </View>
+            
+            <TextInput
+              style={styles.bioInput}
+              value={bioText}
+              onChangeText={setBioText}
+              placeholder="Tell us about yourself..."
+              placeholderTextColor={colors.text.tertiary}
+              multiline
+              maxLength={300}
+              textAlignVertical="top"
+            />
+            
+            <View style={styles.modalFooter}>
+              <Text style={styles.charCount}>{bioText.length}/300</Text>
+              <Button
+                title="Save"
+                onPress={handleBioSave}
+                size="small"
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.background.primary,
   },
-  headerGradient: {
-    paddingTop: 60,
-    paddingBottom: 40,
-  },
-  profileHeader: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginBottom: 16,
-  },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 4,
-    borderColor: '#FFFFFF',
-  },
-  avatarPlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 4,
-    borderColor: '#FFFFFF',
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cameraButton: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#8B5FBF',
-    borderRadius: 16,
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 12,
-  },
-  editButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    gap: 8,
-  },
-  editButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  content: {
-    padding: 20,
-  },
-  section: {
-    marginBottom: 32,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    marginBottom: 16,
-  },
-  bioText: {
-    fontSize: 16,
-    color: '#6B7280',
-    lineHeight: 24,
-  },
-  personalityCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-  },
-  personalityHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    marginBottom: 16,
-  },
-  personalityType: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  compatibilityText: {
-    fontSize: 14,
-    color: '#8B5FBF',
-    marginTop: 2,
-  },
-  viewInsightsButton: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-  },
-  viewInsightsText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#8B5FBF',
-  },
-  interestsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  interestTag: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  interestText: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  preferenceItem: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.layout.header,
+    paddingBottom: spacing.md,
   },
-  preferenceLeft: {
+  headerTitle: {
+    ...typography.styles.h2,
+    color: colors.text.primary,
+  },
+  editButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.background.secondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  authMessage: {
+    ...typography.styles.body,
+    color: colors.text.tertiary,
+    textAlign: 'center',
+    marginTop: spacing.xl * 2,
+  },
+  basicInfoCard: {
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.md,
+  },
+  basicInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    marginBottom: spacing.sm,
   },
-  preferenceText: {
-    fontSize: 16,
-    color: '#1F2937',
-    fontWeight: '500',
+  name: {
+    ...typography.styles.h3,
+    color: colors.text.primary,
+    marginRight: spacing.sm,
   },
-  preferenceButton: {
+  age: {
+    ...typography.styles.body,
+    color: colors.text.secondary,
+    marginRight: spacing.sm,
+  },
+  zodiacSign: {
+    ...typography.styles.body,
+    color: colors.primary[500],
+    fontWeight: typography.weights.semibold,
+  },
+  locationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
-    gap: 12,
+    marginBottom: spacing.xs,
   },
-  preferenceButtonText: {
-    fontSize: 16,
-    color: '#6B7280',
-    fontWeight: '500',
+  location: {
+    ...typography.styles.body,
+    color: colors.text.secondary,
+    marginLeft: spacing.xs,
   },
-  birthDataCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-  },
-  birthDataContent: {
+  professionContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
   },
-  birthDataInfo: {
+  profession: {
+    ...typography.styles.body,
+    color: colors.text.secondary,
+    marginLeft: spacing.xs,
+  },
+  bioCard: {
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.md,
+  },
+  bioHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  sectionTitle: {
+    ...typography.styles.h4,
+    color: colors.text.primary,
+  },
+  bioText: {
+    ...typography.styles.body,
+    color: colors.text.secondary,
+    lineHeight: typography.lineHeights.normal,
+  },
+  interestsCard: {
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.md,
+  },
+  socialCard: {
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.md,
+  },
+  premiumCard: {
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.xl,
+  },
+  modalOverlay: {
     flex: 1,
+    backgroundColor: colors.background.overlay,
+    justifyContent: 'flex-end',
   },
-  birthDataTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 4,
+  modalContent: {
+    backgroundColor: colors.background.secondary,
+    borderTopLeftRadius: spacing.card.borderRadius,
+    borderTopRightRadius: spacing.card.borderRadius,
+    padding: spacing.lg,
+    maxHeight: '70%',
   },
-  birthDataSubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  modalTitle: {
+    ...typography.styles.h4,
+    color: colors.text.primary,
+  },
+  bioInput: {
+    ...typography.styles.body,
+    color: colors.text.primary,
+    backgroundColor: colors.background.tertiary,
+    borderRadius: spacing.input.borderRadius,
+    padding: spacing.md,
+    minHeight: 120,
+    marginBottom: spacing.md,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  charCount: {
+    ...typography.styles.caption,
+    color: colors.text.tertiary,
   },
 });
