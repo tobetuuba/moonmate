@@ -10,6 +10,14 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  interpolate,
+  Extrapolate,
+} from 'react-native-reanimated';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { spacing } from '../theme/spacings';
@@ -36,13 +44,12 @@ export default function ProfilePhotoCarousel({
   const scrollViewRef = useRef<ScrollView>(null);
 
   const allPhotos = isOwnProfile && photos.length === 0 
-    ? [] 
-    : isOwnProfile 
-    ? [{ id: 'add', url: '' }, ...photos.map((url, index) => ({ id: index.toString(), url }))]
+    ? [{ id: 'add', url: '' }] 
     : photos.map((url, index) => ({ id: index.toString(), url }));
 
   const handlePhotoPress = (photoUrl: string, index: number) => {
-    if (isOwnProfile && index === 0 && photos.length === 0) {
+    // Check if this is the "Add Photo" button (only shown when no photos exist)
+    if (isOwnProfile && photos.length === 0 && index === 0) {
       onAddPhoto?.();
       return;
     }
@@ -60,7 +67,7 @@ export default function ProfilePhotoCarousel({
   };
 
   const renderPhoto = (photo: { id: string; url: string }, index: number) => {
-    const isAddPhoto = isOwnProfile && index === 0 && photos.length === 0;
+    const isAddPhoto = isOwnProfile && photos.length === 0 && index === 0;
 
     return (
       <TouchableOpacity
@@ -68,6 +75,8 @@ export default function ProfilePhotoCarousel({
         style={styles.photoContainer}
         onPress={() => handlePhotoPress(photo.url, index)}
         activeOpacity={0.9}
+        accessibilityLabel={isAddPhoto ? "Add photo" : `Photo ${index + 1}`}
+        accessibilityRole="button"
       >
         {isAddPhoto ? (
           <View style={styles.addPhotoContainer}>
@@ -79,9 +88,37 @@ export default function ProfilePhotoCarousel({
             source={{ uri: photo.url }}
             style={styles.photo}
             resizeMode="cover"
+            accessibilityLabel={`Profile photo ${index + 1}`}
           />
         )}
       </TouchableOpacity>
+    );
+  };
+
+  const renderPaginationDot = (index: number) => {
+    const isActive = index === currentIndex;
+    const scale = useSharedValue(isActive ? 1.2 : 1);
+    const opacity = useSharedValue(isActive ? 1 : 0.5);
+
+    React.useEffect(() => {
+      scale.value = withSpring(isActive ? 1.2 : 1, { damping: 15 });
+      opacity.value = withTiming(isActive ? 1 : 0.5, { duration: 200 });
+    }, [isActive]);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+      transform: [{ scale: scale.value }],
+      opacity: opacity.value,
+    }));
+
+    return (
+      <Animated.View
+        key={index}
+        style={[
+          styles.paginationDot,
+          isActive && styles.paginationDotActive,
+          animatedStyle,
+        ]}
+      />
     );
   };
 
@@ -95,6 +132,7 @@ export default function ProfilePhotoCarousel({
         onScroll={handleScroll}
         scrollEventThrottle={16}
         contentContainerStyle={styles.scrollContent}
+        accessibilityLabel="Profile photos carousel"
       >
         {allPhotos.map((photo, index) => renderPhoto(photo, index))}
       </ScrollView>
@@ -102,15 +140,7 @@ export default function ProfilePhotoCarousel({
       {/* Pagination Dots */}
       {allPhotos.length > 1 && (
         <View style={styles.paginationContainer}>
-          {allPhotos.map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.paginationDot,
-                index === currentIndex && styles.paginationDotActive,
-              ]}
-            />
-          ))}
+          {allPhotos.map((_, index) => renderPaginationDot(index))}
         </View>
       )}
 
@@ -125,6 +155,8 @@ export default function ProfilePhotoCarousel({
           <TouchableOpacity
             style={styles.modalCloseButton}
             onPress={() => setSelectedPhoto(null)}
+            accessibilityLabel="Close photo viewer"
+            accessibilityRole="button"
           >
             <Ionicons name="close" size={24} color={colors.text.primary} />
           </TouchableOpacity>
@@ -133,6 +165,7 @@ export default function ProfilePhotoCarousel({
               source={{ uri: selectedPhoto }}
               style={styles.modalPhoto}
               resizeMode="contain"
+              accessibilityLabel="Full screen profile photo"
             />
           )}
         </View>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,8 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  Modal,
-  TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
@@ -19,52 +18,138 @@ import ProfilePhotoCarousel from '../../components/ProfilePhotoCarousel';
 import InterestChips from '../../components/InterestChips';
 import LockedFeature from '../../components/LockedFeature';
 import SocialLink from '../../components/SocialLink';
+import ProfileSection from '../../components/ProfileSection';
+import BioEditModal from '../../components/BioEditModal';
+import Toast from '../../components/Toast';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
 import useAuth from '../../hooks/useAuth';
+import { UserProfile, ToastMessage } from '../../types/profile';
+import { MAX_INTERESTS } from '../../constants/interests';
+import { ProfileService } from '../../services/api/ProfileService';
 
-interface UserProfile {
-  id: string;
-  displayName: string;
-  age: number;
-  zodiacSign: string;
-  city: string;
-  profession?: string;
-  bio: string;
-  photos: string[];
-  interests: string[];
+// Helper function to calculate age from birthDate
+const calculateAge = (birthDate?: string): number => {
+  if (!birthDate) return 25; // Default age
+  
+  const birth = new Date(birthDate);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  
+  return age;
+};
+
+// Default profile data for fallback
+const DEFAULT_PROFILE: UserProfile = {
+  id: '',
+  displayName: 'Sarah',
+  age: 25,
+  birthDate: '1998-10-15', // Example birth date
+  birthTime: '14:30',
+  birthPlace: {
+    city: 'Istanbul',
+    country: 'Turkey',
+    latitude: 41.0082,
+    longitude: 28.9784,
+  },
+  location: {
+    city: 'Istanbul',
+    country: 'Turkey',
+    latitude: 41.0082,
+    longitude: 28.9784,
+  },
+  gender: 'female',
+  seeking: ['men'],
+  relationshipGoals: ['Long-term relationship'],
+  bio: 'Love exploring new places and trying different cuisines! 🌍🍕',
+  photos: [
+    'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg',
+    'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg',
+  ],
+  interests: ['music', 'travel', 'cooking'],
   socialLinks: {
-    instagram?: string;
-    spotify?: string;
-  };
-}
+    instagram: 'sarah_insta',
+    spotify: 'sarah_spotify',
+  },
+};
 
 export default function ProfileScreen() {
   const { user, isAuthenticated } = useAuth();
   const [isOwnProfile] = useState(true); // For now, always show own profile
   const [isEditing, setIsEditing] = useState(false);
   const [showBioModal, setShowBioModal] = useState(false);
-  const [bioText, setBioText] = useState('');
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<UserProfile>(DEFAULT_PROFILE);
 
-  // Mock user data - replace with real data from Firebase
-  const [userProfile, setUserProfile] = useState<UserProfile>({
-    id: user?.uid || '1',
-    displayName: user?.displayName || 'Sarah',
-    age: 25,
-    zodiacSign: 'Libra',
-    city: 'Istanbul',
-    profession: 'Software Engineer',
-    bio: 'Love exploring new places and trying different cuisines! 🌍🍕',
-    photos: [
-      'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg',
-      'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg',
-    ],
-    interests: ['music', 'travel', 'cooking'],
-    socialLinks: {
-      instagram: 'sarah_insta',
-      spotify: 'sarah_spotify',
-    },
-  });
+  // Load user profile from Firestore
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (!isAuthenticated || !user?.uid) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        console.log('🔄 Loading profile for user:', user.uid);
+        
+        const profile = await ProfileService.getUserProfile(user.uid);
+        
+        if (profile) {
+          console.log('✅ Profile loaded from Firestore');
+          console.log('📍 City:', profile.location?.city);
+          console.log('👤 Age:', profile.age);
+          console.log('📝 Bio:', profile.bio);
+          setUserProfile(profile);
+        } else {
+          console.log('⚠️ No profile found, using default data');
+          // Create initial profile with user data
+          const initialProfile: UserProfile = {
+            ...DEFAULT_PROFILE,
+            id: user.uid,
+            displayName: user.displayName || DEFAULT_PROFILE.displayName,
+            age: calculateAge(DEFAULT_PROFILE.birthDate),
+          };
+          setUserProfile(initialProfile);
+          
+          // Save initial profile to Firestore
+          try {
+            await ProfileService.updateUserProfile(user.uid, initialProfile);
+            console.log('✅ Initial profile created in Firestore');
+          } catch (error) {
+            console.error('❌ Failed to create initial profile:', error);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error loading profile:', error);
+        showToast('Failed to load profile', 'error');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadUserProfile();
+  }, [isAuthenticated, user?.uid]);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    const newToast: ToastMessage = {
+      id: Date.now().toString(),
+      type,
+      message,
+      duration: 3000,
+    };
+    setToasts(prev => [...prev, newToast]);
+  };
+
+  const dismissToast = (id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
 
   const handleAddPhoto = () => {
     Alert.alert('Add Photo', 'Photo picker will be implemented here');
@@ -74,23 +159,53 @@ export default function ProfileScreen() {
     console.log('Photo pressed:', photoUrl, index);
   };
 
-  const handleInterestToggle = (interestId: string) => {
-    setUserProfile(prev => ({
-      ...prev,
-      interests: prev.interests.includes(interestId)
-        ? prev.interests.filter(id => id !== interestId)
-        : [...prev.interests, interestId],
-    }));
+  const handleInterestToggle = async (interestId: string) => {
+    if (!user?.uid) return;
+
+    try {
+      const newInterests = userProfile.interests.includes(interestId)
+        ? userProfile.interests.filter(id => id !== interestId)
+        : [...userProfile.interests, interestId];
+      
+      // Update local state immediately for better UX
+      setUserProfile(prev => ({ ...prev, interests: newInterests }));
+      
+      // Update Firestore
+      await ProfileService.updateInterests(user.uid, newInterests);
+      
+      showToast('Interests updated successfully');
+    } catch (error) {
+      console.error('❌ Error updating interests:', error);
+      showToast('Failed to update interests', 'error');
+      
+      // Revert local state on error
+      setUserProfile(prev => ({ ...prev, interests: userProfile.interests }));
+    }
   };
 
   const handleBioEdit = () => {
-    setBioText(userProfile.bio);
     setShowBioModal(true);
   };
 
-  const handleBioSave = () => {
-    setUserProfile(prev => ({ ...prev, bio: bioText }));
-    setShowBioModal(false);
+  const handleBioSave = async (newBio: string) => {
+    if (!user?.uid) return;
+
+    try {
+      // Update local state immediately
+      setUserProfile(prev => ({ ...prev, bio: newBio }));
+      setShowBioModal(false);
+      
+      // Update Firestore
+      await ProfileService.updateBio(user.uid, newBio);
+      
+      showToast('Bio updated successfully');
+    } catch (error) {
+      console.error('❌ Error updating bio:', error);
+      showToast('Failed to update bio', 'error');
+      
+      // Revert local state on error
+      setUserProfile(prev => ({ ...prev, bio: userProfile.bio }));
+    }
   };
 
   const handleUpgrade = () => {
@@ -109,6 +224,15 @@ export default function ProfileScreen() {
     );
   }
 
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary[500]} />
+        <Text style={styles.loadingText}>Loading your profile...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -119,6 +243,8 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={styles.editButton}
               onPress={() => setIsEditing(!isEditing)}
+              accessibilityLabel={isEditing ? "Save profile" : "Edit profile"}
+              accessibilityRole="button"
             >
               <Ionicons 
                 name={isEditing ? "checkmark" : "create-outline"} 
@@ -138,56 +264,69 @@ export default function ProfileScreen() {
         />
 
         {/* Basic Info */}
-        <Card variant="elevated" style={styles.basicInfoCard}>
+        <ProfileSection title="Basic Info">
           <View style={styles.basicInfo}>
             <Text style={styles.name}>{userProfile.displayName}</Text>
             <Text style={styles.age}>{userProfile.age}</Text>
-            <Text style={styles.zodiacSign}>{userProfile.zodiacSign}</Text>
+            <Text style={styles.gender}>{userProfile.gender}</Text>
           </View>
           
-          <View style={styles.locationContainer}>
-            <Ionicons name="location" size={16} color={colors.text.tertiary} />
-            <Text style={styles.location}>{userProfile.city}</Text>
-          </View>
-          
-          {userProfile.profession && (
-            <View style={styles.professionContainer}>
-              <Ionicons name="briefcase" size={16} color={colors.text.tertiary} />
-              <Text style={styles.profession}>{userProfile.profession}</Text>
+          {userProfile.location?.city && (
+            <View style={styles.locationContainer}>
+              <Ionicons name="location" size={16} color={colors.text.tertiary} />
+              <Text style={styles.location}>{userProfile.location.city}</Text>
             </View>
           )}
-        </Card>
+        </ProfileSection>
 
         {/* Bio Section */}
-        <Card variant="elevated" style={styles.bioCard}>
-          <View style={styles.bioHeader}>
-            <Text style={styles.sectionTitle}>About Me</Text>
-            {isOwnProfile && isEditing && (
-              <TouchableOpacity onPress={handleBioEdit}>
-                <Ionicons name="create-outline" size={20} color={colors.primary[500]} />
-              </TouchableOpacity>
-            )}
+        <ProfileSection 
+          title="About Me"
+          showEditButton={isOwnProfile && isEditing}
+          onEditPress={handleBioEdit}
+        >
+          <View style={styles.bioContainer}>
+            <Text style={styles.bioText}>
+              {userProfile.bio ? userProfile.bio : 'Let others know what makes you unique! ✨'}
+            </Text>
           </View>
-          
-          <Text style={styles.bioText}>
-            {userProfile.bio || 'No bio yet...'}
-          </Text>
-        </Card>
+        </ProfileSection>
+
+        {/* Looking For Section */}
+        <ProfileSection 
+          title="Looking For"
+          showEditButton={isOwnProfile && isEditing}
+          onEditPress={() => Alert.alert('Edit Looking For', 'This feature will be implemented soon')}
+        >
+          <View style={styles.lookingForContainer}>
+            {userProfile.relationshipGoals?.map((goal, index) => (
+              <View key={index} style={styles.lookingForItem}>
+                <Ionicons name="heart" size={20} color={colors.primary[500]} />
+                <Text style={styles.lookingForText}>{goal}</Text>
+              </View>
+            ))}
+            {userProfile.seeking?.map((preference, index) => (
+              <View key={index} style={styles.lookingForItem}>
+                <Ionicons name="people" size={20} color={colors.secondary[500]} />
+                <Text style={styles.lookingForText}>Interested in {preference}</Text>
+              </View>
+            ))}
+          </View>
+        </ProfileSection>
 
         {/* Interests */}
-        <Card variant="elevated" style={styles.interestsCard}>
+        <ProfileSection title="Interests">
           <InterestChips
             selectedInterests={userProfile.interests}
             isEditable={isOwnProfile && isEditing}
             onInterestToggle={handleInterestToggle}
+            maxSelections={MAX_INTERESTS}
           />
-        </Card>
+        </ProfileSection>
 
         {/* Social Links */}
         {(userProfile.socialLinks.instagram || userProfile.socialLinks.spotify) && (
-          <Card variant="elevated" style={styles.socialCard}>
-            <Text style={styles.sectionTitle}>Social</Text>
-            
+          <ProfileSection title="Social">
             <SocialLink
               platform="instagram"
               username={userProfile.socialLinks.instagram}
@@ -201,13 +340,11 @@ export default function ProfileScreen() {
               isConnected={!!userProfile.socialLinks.spotify}
               onPress={() => handleSocialLinkPress('Spotify')}
             />
-          </Card>
+          </ProfileSection>
         )}
 
         {/* Premium Features */}
-        <Card variant="elevated" style={styles.premiumCard}>
-          <Text style={styles.sectionTitle}>Premium Features</Text>
-          
+        <ProfileSection title="Premium Features">
           <LockedFeature
             title="Zodiac Match"
             description="Find your perfect match based on astrological compatibility"
@@ -228,47 +365,25 @@ export default function ProfileScreen() {
             icon="heart"
             onUpgrade={handleUpgrade}
           />
-        </Card>
+        </ProfileSection>
       </ScrollView>
 
       {/* Bio Edit Modal */}
-      <Modal
+      <BioEditModal
         visible={showBioModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowBioModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Edit Bio</Text>
-              <TouchableOpacity onPress={() => setShowBioModal(false)}>
-                <Ionicons name="close" size={24} color={colors.text.primary} />
-              </TouchableOpacity>
-            </View>
-            
-            <TextInput
-              style={styles.bioInput}
-              value={bioText}
-              onChangeText={setBioText}
-              placeholder="Tell us about yourself..."
-              placeholderTextColor={colors.text.tertiary}
-              multiline
-              maxLength={300}
-              textAlignVertical="top"
-            />
-            
-            <View style={styles.modalFooter}>
-              <Text style={styles.charCount}>{bioText.length}/300</Text>
-              <Button
-                title="Save"
-                onPress={handleBioSave}
-                size="small"
-              />
-            </View>
-          </View>
-        </View>
-      </Modal>
+        bio={userProfile.bio}
+        onSave={handleBioSave}
+        onClose={() => setShowBioModal(false)}
+      />
+
+      {/* Toast Messages */}
+      {toasts.map(toast => (
+        <Toast
+          key={toast.id}
+          message={toast}
+          onDismiss={dismissToast}
+        />
+      ))}
     </View>
   );
 }
@@ -277,6 +392,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.primary,
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: colors.background.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    ...typography.styles.body,
+    color: colors.text.secondary,
+    marginTop: spacing.md,
   },
   header: {
     flexDirection: 'row',
@@ -304,10 +430,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: spacing.xl * 2,
   },
-  basicInfoCard: {
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.md,
-  },
   basicInfo: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -323,7 +445,7 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     marginRight: spacing.sm,
   },
-  zodiacSign: {
+  gender: {
     ...typography.styles.body,
     color: colors.primary[500],
     fontWeight: typography.weights.semibold,
@@ -347,75 +469,26 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     marginLeft: spacing.xs,
   },
-  bioCard: {
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.md,
+  bioContainer: {
+    paddingHorizontal: spacing.sm,
   },
-  bioHeader: {
+  bioText: {
+    ...typography.styles.bodyLarge,
+    color: colors.text.secondary,
+    lineHeight: typography.lineHeights.relaxed,
+    paddingVertical: spacing.sm,
+  },
+  lookingForContainer: {
+    paddingVertical: spacing.sm,
+  },
+  lookingForItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.sm,
   },
-  sectionTitle: {
-    ...typography.styles.h4,
-    color: colors.text.primary,
-  },
-  bioText: {
+  lookingForText: {
     ...typography.styles.body,
     color: colors.text.secondary,
-    lineHeight: typography.lineHeights.normal,
-  },
-  interestsCard: {
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.md,
-  },
-  socialCard: {
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.md,
-  },
-  premiumCard: {
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.xl,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: colors.background.overlay,
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: colors.background.secondary,
-    borderTopLeftRadius: spacing.card.borderRadius,
-    borderTopRightRadius: spacing.card.borderRadius,
-    padding: spacing.lg,
-    maxHeight: '70%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  modalTitle: {
-    ...typography.styles.h4,
-    color: colors.text.primary,
-  },
-  bioInput: {
-    ...typography.styles.body,
-    color: colors.text.primary,
-    backgroundColor: colors.background.tertiary,
-    borderRadius: spacing.input.borderRadius,
-    padding: spacing.md,
-    minHeight: 120,
-    marginBottom: spacing.md,
-  },
-  modalFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  charCount: {
-    ...typography.styles.caption,
-    color: colors.text.tertiary,
+    marginLeft: spacing.sm,
   },
 });

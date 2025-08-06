@@ -9,40 +9,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { spacing } from '../theme/spacings';
+import { SocialPlatform } from '../types/profile';
+import { PLATFORM_CONFIG } from '../constants/social';
 
 interface SocialLinkProps {
-  platform: 'instagram' | 'spotify' | 'twitter' | 'linkedin';
+  platform: SocialPlatform;
   username?: string;
   onPress?: () => void;
   isConnected?: boolean;
 }
-
-const PLATFORM_CONFIG = {
-  instagram: {
-    icon: 'logo-instagram',
-    label: 'Instagram',
-    color: '#E4405F',
-    gradient: ['#833AB4', '#FD1D1D', '#F77737'],
-  },
-  spotify: {
-    icon: 'logo-spotify',
-    label: 'Spotify',
-    color: '#1DB954',
-    gradient: ['#1DB954', '#1ed760'],
-  },
-  twitter: {
-    icon: 'logo-twitter',
-    label: 'Twitter',
-    color: '#1DA1F2',
-    gradient: ['#1DA1F2', '#0d8bd9'],
-  },
-  linkedin: {
-    icon: 'logo-linkedin',
-    label: 'LinkedIn',
-    color: '#0077B5',
-    gradient: ['#0077B5', '#005885'],
-  },
-};
 
 export default function SocialLink({
   platform,
@@ -61,6 +36,8 @@ export default function SocialLink({
       style={styles.container}
       onPress={onPress}
       activeOpacity={0.8}
+      accessibilityLabel={`Open ${config.label} profile`}
+      accessibilityRole="button"
     >
       <View style={styles.content}>
         <View style={[styles.iconContainer, { backgroundColor: config.color + '20' }]}>

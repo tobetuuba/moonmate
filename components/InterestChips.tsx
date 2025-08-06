@@ -9,43 +9,23 @@ import {
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { spacing } from '../theme/spacings';
-
-interface Interest {
-  id: string;
-  label: string;
-  emoji: string;
-  color: string;
-}
+import { Interest } from '../types/profile';
+import { DEFAULT_INTERESTS, MAX_INTERESTS } from '../constants/interests';
 
 interface InterestChipsProps {
-  interests: Interest[];
+  interests?: Interest[];
   selectedInterests: string[];
   isEditable?: boolean;
   onInterestToggle?: (interestId: string) => void;
   maxSelections?: number;
 }
 
-const DEFAULT_INTERESTS: Interest[] = [
-  { id: 'music', label: 'Music', emoji: '🎵', color: colors.primary[500] },
-  { id: 'movies', label: 'Movies', emoji: '🎬', color: colors.secondary[500] },
-  { id: 'travel', label: 'Travel', emoji: '✈️', color: colors.accent.gold },
-  { id: 'cooking', label: 'Cooking', emoji: '👨‍🍳', color: colors.accent.success },
-  { id: 'fitness', label: 'Fitness', emoji: '💪', color: colors.primary[600] },
-  { id: 'reading', label: 'Reading', emoji: '📚', color: colors.secondary[600] },
-  { id: 'photography', label: 'Photography', emoji: '📸', color: colors.accent.warning },
-  { id: 'gaming', label: 'Gaming', emoji: '🎮', color: colors.primary[700] },
-  { id: 'art', label: 'Art', emoji: '🎨', color: colors.secondary[700] },
-  { id: 'dancing', label: 'Dancing', emoji: '💃', color: colors.accent.error },
-  { id: 'hiking', label: 'Hiking', emoji: '🏔️', color: colors.accent.success },
-  { id: 'coffee', label: 'Coffee', emoji: '☕', color: colors.accent.gold },
-];
-
 export default function InterestChips({
   interests = DEFAULT_INTERESTS,
   selectedInterests = [],
   isEditable = false,
   onInterestToggle,
-  maxSelections = 6,
+  maxSelections = MAX_INTERESTS,
 }: InterestChipsProps) {
   const handleInterestPress = (interestId: string) => {
     if (!isEditable) return;
@@ -74,6 +54,9 @@ export default function InterestChips({
         onPress={() => handleInterestPress(interest.id)}
         disabled={isDisabled}
         activeOpacity={0.7}
+        accessibilityLabel={`${interest.label} interest chip`}
+        accessibilityRole="button"
+        accessibilityState={{ selected: isSelected, disabled: isDisabled }}
       >
         <Text style={styles.emoji}>{interest.emoji}</Text>
         <Text style={[
