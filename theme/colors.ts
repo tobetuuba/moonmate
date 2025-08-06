@@ -52,6 +52,7 @@ export const colors = {
     tertiary: '#9CA3AF',
     disabled: '#6B7280',
     inverse: '#1F2937',
+    white: '#FFFFFF',
   },
 
   // Border Colors

@@ -18,10 +18,17 @@ import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ProfileService, UserProfile } from '../services/api/ProfileService';
+import { ProfileService } from '../services/api/ProfileService';
+import { UserProfile } from '../types/profile';
 import PersonalitySlider from '../components/PersonalitySlider';
 import { auth } from '../services/firebase';
 import { uploadProfilePhoto, uploadGalleryPhoto } from '../services/StorageService';
+import { colors } from '../theme/colors';
+import { typography } from '../theme/typography';
+import { spacing } from '../theme/spacings';
+import { texts } from '../constants/texts';
+import Button from '../components/Button';
+import Card from '../components/Card';
 
 interface FormData {
   displayName: string;
@@ -312,57 +319,129 @@ export default function CreateProfileScreen() {
   };
 
   const validateForm = (): boolean => {
+    console.log('🔍 Validating form...');
+    console.log('📝 Form data for validation:', {
+      displayName: formData.displayName,
+      birthDate: formData.birthDate,
+      gender: formData.gender,
+      seeking: formData.seeking,
+      relationshipGoals: formData.relationshipGoals,
+      birthPlace: formData.birthPlace,
+    });
+
     if (!formData.displayName.trim()) {
+      console.log('❌ Validation failed: Display name is empty');
       Alert.alert('Error', 'Display name is required');
       return false;
     }
     if (!formData.birthDate) {
+      console.log('❌ Validation failed: Birth date is empty');
       Alert.alert('Error', 'Birth date is required');
       return false;
     }
     if (!formData.gender) {
+      console.log('❌ Validation failed: Gender is empty');
       Alert.alert('Error', 'Gender is required');
       return false;
     }
     if (formData.seeking.length === 0) {
+      console.log('❌ Validation failed: Seeking is empty');
       Alert.alert('Error', 'Please select who you are seeking');
       return false;
     }
+    if (formData.relationshipGoals.length === 0) {
+      console.log('❌ Validation failed: Relationship goals is empty');
+      Alert.alert('Error', 'Please select your relationship goals');
+      return false;
+    }
+    if (!formData.birthPlace.city || !formData.birthPlace.country) {
+      console.log('❌ Validation failed: Birth place is incomplete');
+      Alert.alert('Error', 'Please select your birth place');
+      return false;
+    }
+    
+    console.log('✅ Form validation passed');
     return true;
   };
 
   const handleSubmit = async () => {
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      console.log('❌ Form validation failed');
+      return;
+    }
 
     setIsSubmitting(true);
+    console.log('🚀 Starting profile submission...');
+    console.log('📝 Form data:', JSON.stringify(formData, null, 2));
+
     try {
+      // Calculate age from birth date
+      const birthDate = new Date(formData.birthDate);
+      const today = new Date();
+      const age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      const finalAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
+
+      console.log('👤 Calculated age:', finalAge);
+      console.log('📅 Birth date:', formData.birthDate);
+
       // Use birth place as default location if location is not set
       const finalLocation = formData.location.city 
         ? formData.location 
         : formData.birthPlace;
 
+      console.log('📍 Final location:', finalLocation);
+
       const profileData = {
         ...formData,
+        age: finalAge,
         location: finalLocation,
       };
 
+      console.log('🎯 Final profile data:', JSON.stringify(profileData, null, 2));
+
       if (isEditMode) {
-        // Update existing profile
-        await ProfileService.updateUserProfile(profileData);
+        console.log('✏️ Updating existing profile...');
+        const userId = auth.currentUser?.uid;
+        console.log('👤 Current user ID:', userId);
+        
+        if (!userId) {
+          throw new Error('User not authenticated');
+        }
+
+        await ProfileService.updateUserProfile(userId, profileData);
+        console.log('✅ Profile updated successfully');
         Alert.alert('Success', 'Profile updated successfully!', [
           { text: 'OK', onPress: () => router.back() }
         ]);
       } else {
-        // Create new profile
+        console.log('🆕 Creating new profile...');
+        const userId = auth.currentUser?.uid;
+        console.log('👤 Current user ID:', userId);
+        
+        if (!userId) {
+          throw new Error('User not authenticated');
+        }
+
         await ProfileService.createUserProfile(profileData);
+        console.log('✅ Profile created successfully');
         Alert.alert('Success', 'Profile created successfully!', [
           { text: 'OK', onPress: () => router.replace('/(tabs)') }
         ]);
       }
     } catch (error) {
+      console.error('❌ Profile submission error:', error);
+      console.error('❌ Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        formData: formData,
+        isEditMode: isEditMode,
+        userId: auth.currentUser?.uid,
+      });
       Alert.alert('Error', `Failed to ${isEditMode ? 'update' : 'create'} profile. Please try again.`);
     } finally {
       setIsSubmitting(false);
+      console.log('🏁 Profile submission completed');
     }
   };
 
@@ -399,7 +478,7 @@ export default function CreateProfileScreen() {
       >
         <View style={{ flex: 1 }}>
           <LinearGradient
-            colors={['#FF6B9D', '#C44569', '#8B5FBF']}
+            colors={colors.gradients.primary}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.headerGradient}
@@ -409,14 +488,14 @@ export default function CreateProfileScreen() {
                 style={styles.backButton}
                 onPress={() => router.back()}
               >
-                <Ionicons name="arrow-back" size={24} color="#fff" />
+                <Ionicons name="arrow-back" size={24} color={colors.text.white} />
               </TouchableOpacity>
               <View style={styles.headerContent}>
                 <Text style={styles.title}>
-                  {isEditMode ? '✨ Edit Your Profile ✨' : '✨ Create Your Profile ✨'}
+                  {isEditMode ? texts.profile.editTitle : texts.profile.createTitle}
                 </Text>
                 <Text style={styles.subtitle}>
-                  {isEditMode ? 'Update your profile information! 🌟' : 'Let\'s make your profile shine! 🌟'}
+                  {isEditMode ? texts.profile.editSubtitle : texts.profile.createSubtitle}
                 </Text>
               </View>
             </View>
@@ -431,9 +510,9 @@ export default function CreateProfileScreen() {
             ]}
           >
             {/* Display Name */}
-            <View style={styles.section}>
+            <Card variant="elevated" padding="medium" style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="person-circle" size={24} color="#FF6B9D" />
+                <Ionicons name="person-circle" size={24} color={colors.primary[500]} />
                 <Text style={styles.sectionTitle}>Display Name *</Text>
               </View>
               <TextInput
@@ -442,13 +521,14 @@ export default function CreateProfileScreen() {
                 onChangeText={(text) => updateFormData('displayName', text)}
                 placeholder="✨ What should we call you?"
                 maxLength={50}
+                placeholderTextColor={colors.text.tertiary}
               />
-            </View>
+            </Card>
 
             {/* Birth Date */}
-            <View style={styles.section}>
+            <Card variant="elevated" padding="medium" style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="calendar" size={24} color="#C44569" />
+                <Ionicons name="calendar" size={24} color={colors.secondary[500]} />
                 <Text style={styles.sectionTitle}>Birth Date *</Text>
               </View>
               <TouchableOpacity
@@ -470,9 +550,9 @@ export default function CreateProfileScreen() {
                 <Text style={styles.dateButtonText}>
                   {formData.birthDate || '🎂 When were you born?'}
                 </Text>
-                <Ionicons name="calendar-outline" size={20} color="#8B5FBF" />
+                <Ionicons name="calendar-outline" size={20} color={colors.primary[500]} />
               </TouchableOpacity>
-            </View>
+            </Card>
 
             {/* Birth Time */}
             <View style={styles.section}>
@@ -718,60 +798,25 @@ export default function CreateProfileScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Debug Section - Remove in production */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Ionicons name="bug" size={24} color="#FF6B9D" />
-                <Text style={styles.sectionTitle}>Debug Tools</Text>
-              </View>
-                          <TouchableOpacity
-              style={styles.dateButton}
-              onPress={async () => {
-                try {
-                  console.log('Testing Firebase Storage connection...');
-                  const isConnected = await ProfileService.testStorageConnection();
-                  console.log('Test result:', isConnected);
-                  Alert.alert(
-                    'Storage Test', 
-                    isConnected ? '✅ Firebase Storage connection successful!' : '❌ Firebase Storage connection failed!'
-                  );
-                } catch (error) {
-                  console.error('Storage test error:', error);
-                  Alert.alert('Test Error', error instanceof Error ? error.message : 'Unknown error');
-                }
-              }}
-            >
-              <Text style={styles.dateButtonText}>
-                🔧 Test Firebase Storage Connection
-              </Text>
-              <Ionicons name="settings-outline" size={20} color="#8B5FBF" />
-            </TouchableOpacity>
-            </View>
+
           </Animated.View>
         </View>
       </ScrollView>
 
       {/* Submit Button */}
       <View style={styles.submitContainer}>
-        <TouchableOpacity
-          style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+        <Button
+          variant="primary"
+          title={
+            isSubmitting 
+              ? (isEditMode ? '✨ Updating Profile...' : '✨ Creating Profile...')
+              : (isEditMode ? '🚀 Update Profile' : '🚀 Create Profile')
+          }
           onPress={handleSubmit}
           disabled={isSubmitting}
-        >
-          <LinearGradient
-            colors={['#FF6B9D', '#C44569', '#8B5FBF']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.submitButtonGradient}
-          >
-                          <Text style={styles.submitButtonText}>
-                {isSubmitting 
-                  ? (isEditMode ? '✨ Updating Profile...' : '✨ Creating Profile...')
-                  : (isEditMode ? '🚀 Update Profile' : '🚀 Create Profile')
-                }
-              </Text>
-          </LinearGradient>
-        </TouchableOpacity>
+          loading={isSubmitting}
+          style={styles.submitButton}
+        />
       </View>
 
       {/* Date Picker */}
@@ -1010,7 +1055,7 @@ export default function CreateProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.background.primary,
   },
 
   keyboardAvoidingView: {
@@ -1070,18 +1115,8 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   section: {
-    backgroundColor: '#fff',
-    marginHorizontal: 20,
-    marginTop: 20,
-    padding: 20,
-    borderRadius: 20,
-    shadowColor: '#FF6B9D',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 107, 157, 0.1)',
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -1089,19 +1124,18 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    marginLeft: 12,
+    ...typography.styles.h3,
+    color: colors.text.primary,
+    marginLeft: spacing.sm,
   },
   textInput: {
     borderWidth: 2,
-    borderColor: '#F3F4F6',
-    borderRadius: 16,
-    padding: 16,
-    fontSize: 16,
-    backgroundColor: '#fff',
-    color: '#1a1a1a',
+    borderColor: colors.border.secondary,
+    borderRadius: spacing.md,
+    padding: spacing.md,
+    ...typography.styles.body,
+    backgroundColor: colors.background.secondary,
+    color: colors.text.primary,
   },
   textArea: {
     height: 120,
@@ -1247,21 +1281,21 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+    backgroundColor: colors.background.primary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 107, 157, 0.2)',
-    shadowColor: '#000',
+    borderTopColor: colors.border.primary,
+    shadowColor: colors.text.inverse,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 8,
   },
   submitButton: {
-    borderRadius: 20,
+    borderRadius: spacing.button.borderRadius,
     overflow: 'hidden',
-    shadowColor: '#FF6B9D',
+    shadowColor: colors.primary[500],
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 12,

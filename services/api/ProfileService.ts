@@ -1,5 +1,5 @@
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { UserProfile } from '../../types/profile';
 
 export class ProfileService {
@@ -68,18 +68,31 @@ export class ProfileService {
    * Create or update user profile
    */
   static async updateUserProfile(userId: string, profileData: Partial<UserProfile>): Promise<void> {
+    console.log('🔥 ProfileService.updateUserProfile called');
+    console.log('👤 User ID:', userId);
+    console.log('📝 Profile data:', JSON.stringify(profileData, null, 2));
+    
     try {
       const userDoc = doc(db, this.COLLECTION, userId);
+      console.log('📄 Firestore document path:', `${this.COLLECTION}/${userId}`);
       
       const updateData = {
         ...profileData,
         updatedAt: serverTimestamp(),
       };
 
+      console.log('💾 Data to update:', JSON.stringify(updateData, null, 2));
+
       await setDoc(userDoc, updateData, { merge: true });
-      console.log('✅ Profile updated successfully');
+      console.log('✅ Profile updated successfully in Firestore');
     } catch (error) {
-      console.error('Error updating user profile:', error);
+      console.error('❌ Error updating user profile:', error);
+      console.error('❌ Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        code: (error as any)?.code,
+        userId: userId,
+        profileData: profileData,
+      });
       throw error;
     }
   }
@@ -130,5 +143,47 @@ export class ProfileService {
    */
   static async updateSocialLinks(userId: string, socialLinks: UserProfile['socialLinks']): Promise<void> {
     await this.updateProfileFields(userId, { socialLinks });
+  }
+
+  /**
+   * Create new user profile
+   */
+  static async createUserProfile(profileData: Partial<UserProfile>): Promise<void> {
+    console.log('🔥 ProfileService.createUserProfile called');
+    console.log('📝 Profile data:', JSON.stringify(profileData, null, 2));
+    
+    const userId = auth.currentUser?.uid;
+    console.log('👤 User ID:', userId);
+    
+    if (!userId) {
+      console.error('❌ User not authenticated');
+      throw new Error('User not authenticated');
+    }
+
+    try {
+      const userRef = doc(db, 'users', userId);
+      console.log('📄 Firestore document path:', `users/${userId}`);
+      
+      const dataToSave = {
+        ...profileData,
+        id: userId,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+      
+      console.log('💾 Data to save:', JSON.stringify(dataToSave, null, 2));
+      
+      await setDoc(userRef, dataToSave);
+      console.log('✅ Profile created successfully in Firestore');
+    } catch (error) {
+      console.error('❌ Error creating profile:', error);
+      console.error('❌ Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        code: (error as any)?.code,
+        userId: userId,
+        profileData: profileData,
+      });
+      throw error;
+    }
   }
 } 

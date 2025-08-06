@@ -39,6 +39,10 @@ export const texts = {
 
   // Profile
   profile: {
+    createTitle: '✨ Create Your Profile ✨',
+    createSubtitle: "Let's make your profile shine! 🌟",
+    editTitle: '✨ Edit Your Profile ✨',
+    editSubtitle: 'Update your profile information! 🌟',
     create: {
       title: 'Create Your Profile',
       subtitle: 'Tell us about yourself',
