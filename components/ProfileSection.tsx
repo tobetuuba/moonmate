@@ -20,7 +20,7 @@ export default function ProfileSection({
   style,
 }: ProfileSectionProps) {
   return (
-    <Card variant="elevated" style={[styles.container, style]}>
+    <Card variant="elevated" style={StyleSheet.flatten([styles.container, style])}>
       <View style={styles.header}>
         <Text style={styles.title}>{title}</Text>
         {showEditButton && (
