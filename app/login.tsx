@@ -19,6 +19,12 @@ import { signInWithEmailAndPassword, signInWithPhoneNumber } from 'firebase/auth
 import CountryPicker, { Country, CountryCode } from 'react-native-country-picker-modal';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { auth } from '../services/firebase';
+import { colors } from '../theme/colors';
+import { typography } from '../theme/typography';
+import { spacing } from '../theme/spacings';
+import { texts } from '../constants/texts';
+import Button from '../components/Button';
+import Card from '../components/Card';
 
 export default function LoginScreen() {
   const [mode, setMode] = useState<'email' | 'phone'>('email');
@@ -99,8 +105,6 @@ export default function LoginScreen() {
         errorMessage = 'Too many failed attempts. Please try again later.';
       } else if (error.code === 'auth/user-disabled') {
         errorMessage = 'This account has been disabled. Please contact support.';
-      } else if (error.code === 'auth/network-request-failed') {
-        errorMessage = 'Network error. Please check your internet connection.';
       }
       
       setError(errorMessage);
@@ -108,14 +112,6 @@ export default function LoginScreen() {
   };
 
   const handlePhoneLogin = async () => {
-    if (!country) {
-      setError('Please select a country');
-      return;
-    }
-    if (!phone) {
-      setError('Please enter your phone number');
-      return;
-    }
     if (!validatePhoneNumber()) {
       setError('Please enter a valid phone number');
       return;
@@ -127,25 +123,11 @@ export default function LoginScreen() {
       const fullNumber = getFullNumber();
       await signInWithPhoneNumber(auth, fullNumber);
       setIsLoading(false);
-      router.push({ pathname: '/verify', params: { phone: fullNumber } });
+      router.replace('/(tabs)');
     } catch (error: any) {
       setIsLoading(false);
       console.error('Phone login error:', error);
-      
-      // Handle specific Firebase auth errors
-      let errorMessage = 'Failed to send verification code. Please try again.';
-      
-      if (error.code === 'auth/invalid-phone-number') {
-        errorMessage = 'Invalid phone number. Please check the number and try again.';
-      } else if (error.code === 'auth/too-many-requests') {
-        errorMessage = 'Too many attempts. Please try again later.';
-      } else if (error.code === 'auth/quota-exceeded') {
-        errorMessage = 'SMS quota exceeded. Please try again later.';
-      } else if (error.code === 'auth/network-request-failed') {
-        errorMessage = 'Network error. Please check your internet connection.';
-      }
-      
-      setError(errorMessage);
+      setError('Failed to send verification code. Please try again.');
     }
   };
 
@@ -154,7 +136,8 @@ export default function LoginScreen() {
   };
 
   const handleForgotPassword = () => {
-    Alert.alert('Coming Soon', 'Password reset functionality will be available soon!');
+    // TODO: Implement forgot password
+    Alert.alert('Coming Soon', 'Password reset feature will be available soon.');
   };
 
   return (
@@ -162,157 +145,157 @@ export default function LoginScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView
-        contentContainerStyle={styles.scrollContainer}
-        keyboardShouldPersistTaps="handled"
+      <LinearGradient
+        colors={colors.gradients.primary}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.headerGradient}
       >
-        <View style={{ flex: 1 }}>
-          <LinearGradient
-            colors={['#8B5FBF', '#E91E63']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.headerGradient}>
-            <View style={styles.header}>
-              <TouchableOpacity onPress={handleSignUp} style={styles.backButton}>
-                <Feather name="arrow-left" size={24} color="#FFFFFF" />
-              </TouchableOpacity>
-              <View style={styles.logoContainer}>
-                <Ionicons name="heart" size={40} color="#FFFFFF" />
-                <MaterialCommunityIcons name="star-four-points" size={24} color="#FFFFFF" style={styles.sparkleIcon} />
-              </View>
-              <Text style={styles.title}>MoonMate</Text>
-              <Text style={styles.subtitle}>Sign in to your account</Text>
-            </View>
-          </LinearGradient>
+        <View style={styles.header}>
+          <MaterialCommunityIcons name="star-four-points" size={48} color={colors.text.primary} />
+          <Text style={styles.title}>{texts.app.name}</Text>
+          <Text style={styles.subtitle}>{texts.auth.login.subtitle}</Text>
+        </View>
+      </LinearGradient>
 
-          <View style={styles.toggleRow}>
-            <TouchableOpacity onPress={() => setMode('email')} style={[styles.toggleButton, mode === 'email' && styles.toggleActive]}>
-              <Text style={styles.toggleText}>Email</Text>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <Card variant="elevated" style={styles.formContainer}>
+          {/* Mode Toggle */}
+          <View style={styles.modeToggle}>
+            <TouchableOpacity
+              style={[styles.modeButton, mode === 'email' && styles.activeModeButton]}
+              onPress={() => setMode('email')}
+            >
+              <Ionicons 
+                name="mail" 
+                size={20} 
+                color={mode === 'email' ? colors.text.primary : colors.text.tertiary} 
+              />
+              <Text style={[styles.modeText, mode === 'email' && styles.activeModeText]}>
+                Email
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setMode('phone')} style={[styles.toggleButton, mode === 'phone' && styles.toggleActive]}>
-              <Text style={styles.toggleText}>Phone</Text>
+            
+            <TouchableOpacity
+              style={[styles.modeButton, mode === 'phone' && styles.activeModeButton]}
+              onPress={() => setMode('phone')}
+            >
+              <Ionicons 
+                name="call" 
+                size={20} 
+                color={mode === 'phone' ? colors.text.primary : colors.text.tertiary} 
+              />
+              <Text style={[styles.modeText, mode === 'phone' && styles.activeModeText]}>
+                Phone
+              </Text>
             </TouchableOpacity>
           </View>
+
+          {error ? (
+            <View style={styles.errorContainer}>
+              <Ionicons name="alert-circle" size={16} color={colors.accent.error} />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
+
           {mode === 'email' ? (
-            <View style={styles.formContainer}>
-              <Text style={styles.welcomeText}>Welcome back!</Text>
-              <Text style={styles.descriptionText}>
-                Sign in to continue your journey of meaningful connections
-              </Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Email"
-                value={email}
-                onChangeText={(text) => {
-                  setEmail(text);
-                  setError('');
-                }}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                value={password}
-                onChangeText={(text) => {
-                  setPassword(text);
-                  setError('');
-                }}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeIcon}>
-                {showPassword ? (
-                  <Feather name="eye-off" size={20} color="#9CA3AF" />
-                ) : (
-                  <Feather name="eye" size={20} color="#9CA3AF" />
-                )}
+            // Email Login Form
+            <View style={styles.form}>
+              <View style={styles.inputContainer}>
+                <Ionicons name="mail" size={20} color={colors.text.tertiary} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.textInput}
+                  placeholder={texts.auth.login.email}
+                  placeholderTextColor={colors.text.tertiary}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Ionicons name="lock-closed" size={20} color={colors.text.tertiary} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.textInput}
+                  placeholder={texts.auth.login.password}
+                  placeholderTextColor={colors.text.tertiary}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity
+                  style={styles.passwordToggle}
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  <Ionicons
+                    name={showPassword ? 'eye-off' : 'eye'}
+                    size={20}
+                    color={colors.text.tertiary}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity style={styles.forgotPassword} onPress={handleForgotPassword}>
+                <Text style={styles.forgotPasswordText}>{texts.auth.login.forgotPassword}</Text>
               </TouchableOpacity>
-              {error ? <Text style={styles.errorText}>{error}</Text> : null}
-              <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotPassword}>
-                <Text style={styles.forgotPasswordText}>Forgot password?</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+
+              <Button
+                title={texts.auth.login.signIn}
                 onPress={handleEmailLogin}
-                disabled={isLoading}>
-                <LinearGradient
-                  colors={['#8B5FBF', '#E91E63']}
-                  style={styles.loginButtonGradient}>
-                  <Text style={styles.loginButtonText}>
-                    {isLoading ? 'Signing In...' : 'Sign In'}
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
+                loading={isLoading}
+                style={styles.loginButton}
+              />
             </View>
           ) : (
-            <View style={styles.formContainer}>
-              <Text style={styles.welcomeText}>Welcome back!</Text>
-              <Text style={styles.descriptionText}>
-                Sign in to continue your journey of meaningful connections
-              </Text>
-              <View style={styles.inputContainer}>
-                <View style={styles.countryPhoneRow}>
-                  <CountryPicker
-                    countryCode={countryCode as CountryCode}
-                    withFilter
-                    withFlag
-                    withCallingCode
-                    withEmoji
-                    withCountryNameButton={withCountryNameButton}
-                    onSelect={onSelect}
-                    containerButtonStyle={styles.countryPicker}
-                  />
-                  <View style={styles.callingCodeBox}>
-                    <Text style={styles.callingCodeText}>
-                      {country?.callingCode ? `+${country.callingCode[0]}` : '+90'}
-                    </Text>
-                  </View>
-                  <TextInput
-                    ref={phoneInputRef}
-                    style={[styles.input, { flex: 1, marginBottom: 0 }]}
-                    placeholder="Phone number"
-                    placeholderTextColor="#9CA3AF"
-                    value={phone}
-                    onChangeText={handlePhoneChange}
-                    keyboardType="phone-pad"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    maxLength={15}
-                    returnKeyType="done"
-                  />
-                </View>
-                {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            // Phone Login Form
+            <View style={styles.form}>
+              <View style={styles.phoneContainer}>
+                <CountryPicker
+                  countryCode={countryCode}
+                  withFilter
+                  withFlag
+                  withCallingCode
+                  withEmoji
+                  withCountryNameButton={withCountryNameButton}
+                  onSelect={onSelect}
+                  containerButtonStyle={styles.countryPickerButton}
+                />
+                <TextInput
+                  ref={phoneInputRef}
+                  style={styles.phoneInput}
+                  placeholder="Enter phone number"
+                  placeholderTextColor={colors.text.tertiary}
+                  value={phone}
+                  onChangeText={handlePhoneChange}
+                  keyboardType="phone-pad"
+                />
               </View>
-              <TouchableOpacity
-                style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+
+              <Button
+                title="Send Code"
                 onPress={handlePhoneLogin}
-                disabled={isLoading}>
-                <LinearGradient
-                  colors={['#8B5FBF', '#E91E63']}
-                  style={styles.loginButtonGradient}>
-                  <Text style={styles.loginButtonText}>
-                    {isLoading ? 'Signing in...' : 'Sign In'}
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
+                loading={isLoading}
+                style={styles.loginButton}
+              />
             </View>
           )}
-          <View style={styles.dividerContainer}>
-            <View style={styles.divider} />
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
             <Text style={styles.dividerText}>or</Text>
-            <View style={styles.divider} />
+            <View style={styles.dividerLine} />
           </View>
-          <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp}>
-            <Text style={styles.signUpButtonText}>
-              Don't have an account? <Text style={styles.signUpLink}>Sign up</Text>
-            </Text>
-          </TouchableOpacity>
-        </View>
+
+          <Button
+            title={texts.auth.login.signUp}
+            onPress={handleSignUp}
+            variant="outline"
+            style={styles.signUpButton}
+          />
+        </Card>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -321,202 +304,139 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    minHeight: '100%',
+    backgroundColor: colors.background.primary,
   },
   headerGradient: {
-    width: '100%',
-    paddingTop: 60,
-    paddingBottom: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
+    paddingTop: spacing.layout.header,
+    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.md,
   },
   header: {
     alignItems: 'center',
-    width: '100%',
-    gap: 2,
-  },
-  backButton: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    padding: 8,
-  },
-  logoContainer: {
-    position: 'relative',
-    marginBottom: 16,
-  },
-  sparkleIcon: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
   },
   title: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginTop: 4,
+    ...typography.styles.h1,
+    color: colors.text.primary,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#fff',
-    opacity: 0.85,
+    ...typography.styles.body,
+    color: colors.text.secondary,
     textAlign: 'center',
-    marginBottom: 8,
   },
-  toggleRow: { flexDirection: 'row', justifyContent: 'center', marginVertical: 24 },
-  toggleButton: { padding: 12, borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  toggleActive: { borderBottomColor: '#8B5FBF' },
-  toggleText: { fontSize: 16, color: '#8B5FBF', fontWeight: 'bold' },
+  content: {
+    flex: 1,
+    padding: spacing.md,
+  },
   formContainer: {
-    width: '92%',
-    backgroundColor: 'transparent',
-    alignSelf: 'center',
-    marginTop: 12,
+    padding: spacing.lg,
+  },
+  modeToggle: {
+    flexDirection: 'row',
+    backgroundColor: colors.background.tertiary,
+    borderRadius: spacing.button.borderRadius,
+    padding: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  modeButton: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
+    borderRadius: spacing.button.borderRadius - 2,
   },
-  welcomeText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    marginBottom: 8,
-    textAlign: 'center',
+  activeModeButton: {
+    backgroundColor: colors.primary[500],
   },
-  descriptionText: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginBottom: 16,
-    lineHeight: 20,
+  modeText: {
+    ...typography.styles.buttonSmall,
+    color: colors.text.tertiary,
+    marginLeft: spacing.xs,
+  },
+  activeModeText: {
+    color: colors.text.primary,
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.accent.error + '20',
+    padding: spacing.sm,
+    borderRadius: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  errorText: {
+    ...typography.styles.bodySmall,
+    color: colors.accent.error,
+    marginLeft: spacing.xs,
+  },
+  form: {
+    gap: spacing.md,
   },
   inputContainer: {
-    width: '100%',
-    gap: 8,
-    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background.tertiary,
+    borderRadius: spacing.input.borderRadius,
+    paddingHorizontal: spacing.input.paddingHorizontal,
+    paddingVertical: spacing.input.paddingVertical,
   },
-  input: {
-    fontSize: 16,
-    color: '#1F2937',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    marginBottom: 16,
-    alignSelf: 'center',
-    width: '100%',
-    maxWidth: 320,
+  inputIcon: {
+    marginRight: spacing.sm,
   },
-  eyeIcon: {
-    padding: 4,
+  textInput: {
+    flex: 1,
+    ...typography.styles.input,
+    color: colors.text.primary,
+  },
+  passwordToggle: {
+    padding: spacing.xs,
   },
   forgotPassword: {
     alignSelf: 'flex-end',
-    marginTop: 2,
-    marginBottom: 8,
-    marginRight: 4,
   },
   forgotPasswordText: {
-    fontSize: 14,
-    color: '#8B5FBF',
-    fontWeight: '600',
+    ...typography.styles.bodySmall,
+    color: colors.primary[500],
   },
   loginButton: {
-    borderRadius: 20,
-    overflow: 'hidden',
-    marginBottom: 16,
-    elevation: 1,
-    shadowColor: '#8B5FBF',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.13,
-    shadowRadius: 3,
-    width: '100%',
-    maxWidth: 320,
-    alignSelf: 'center',
+    marginTop: spacing.sm,
   },
-  loginButtonDisabled: {
-    opacity: 0.7,
-  },
-  loginButtonGradient: {
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  loginButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  dividerContainer: {
+  phoneContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 16,
-    width: '100%',
+    backgroundColor: colors.background.tertiary,
+    borderRadius: spacing.input.borderRadius,
+    paddingHorizontal: spacing.input.paddingHorizontal,
+    paddingVertical: spacing.input.paddingVertical,
+  },
+  countryPickerButton: {
+    backgroundColor: 'transparent',
+    paddingVertical: 0,
+  },
+  phoneInput: {
+    flex: 1,
+    ...typography.styles.input,
+    color: colors.text.primary,
+    marginLeft: spacing.sm,
   },
   divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E5E7EB',
-  },
-  dividerText: {
-    marginHorizontal: 12,
-    fontSize: 14,
-    color: '#9CA3AF',
-  },
-  signUpButton: {
-    alignItems: 'center',
-    marginVertical: 4,
-  },
-  signUpButtonText: {
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  signUpLink: {
-    color: '#8B5FBF',
-    fontWeight: 'bold',
-  },
-  countryPhoneRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
-    width: '100%',
-    maxWidth: 320,
-    alignSelf: 'center',
+    marginVertical: spacing.lg,
   },
-  countryPicker: {
-    marginRight: 8,
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border.primary,
   },
-  callingCodeBox: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    marginRight: 8,
-    minWidth: 48,
-    alignItems: 'center',
+  dividerText: {
+    ...typography.styles.bodySmall,
+    color: colors.text.tertiary,
+    marginHorizontal: spacing.md,
   },
-  callingCodeText: {
-    fontSize: 16,
-    color: '#1F2937',
-    fontWeight: 'bold',
-  },
-  errorText: {
-    color: '#DC2626',
-    fontSize: 14,
-    marginTop: 8,
-    marginBottom: 8,
-    textAlign: 'center',
-    fontWeight: '500',
-    backgroundColor: 'rgba(220, 38, 38, 0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(220, 38, 38, 0.2)',
+  signUpButton: {
+    marginTop: spacing.sm,
   },
 });

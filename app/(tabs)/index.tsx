@@ -1,84 +1,90 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { MaterialIcons } from '@expo/vector-icons';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { colors } from '../../theme/colors';
+import { typography } from '../../theme/typography';
+import { spacing } from '../../theme/spacings';
+import { texts } from '../../constants/texts';
+import { features } from '../../constants/features';
+import Button from '../../components/Button';
+import Card from '../../components/Card';
 
 export default function HomeScreen() {
   const navigateToVisualMatch = () => {
     router.push('/visual-match');
   };
 
-  const navigateToTest = () => {
-    router.push('/test-match');
-  };
-
   const navigateToZodiac = () => {
-    router.push('/birth-data');
+    // TODO: Implement premium feature check
+    console.log('Zodiac Match - Premium feature');
   };
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <LinearGradient
-        colors={['#8B5FBF', '#E91E63']}
+        colors={colors.gradients.primary}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.headerGradient}>
         <View style={styles.header}>
-          <Text style={styles.title}>MoonMate</Text>
-          <Text style={styles.subtitle}>Find your emotional connection</Text>
+          <Text style={styles.title}>{texts.app.name}</Text>
+          <Text style={styles.subtitle}>{texts.app.tagline}</Text>
         </View>
       </LinearGradient>
 
       <View style={styles.content}>
+        {/* Welcome Section */}
         <View style={styles.welcomeSection}>
-          <MaterialCommunityIcons name="star-four-points" size={32} color="#8B5FBF" />
+          <Ionicons name="star" size={32} color={colors.primary[500]} />
           <Text style={styles.welcomeText}>
             Welcome to a new way of dating. Choose how you'd like to connect:
           </Text>
         </View>
 
+        {/* Options Container */}
         <View style={styles.optionsContainer}>
+          {/* Visual Match */}
           <TouchableOpacity style={styles.optionCard} onPress={navigateToVisualMatch}>
             <LinearGradient
-              colors={['#8B5FBF', '#A855F7']}
+              colors={colors.gradients.primary}
               style={styles.optionGradient}>
-              <Ionicons name="heart" size={40} color="#FFFFFF" />
-              <Text style={styles.optionTitle}>Visual Match</Text>
+              <Ionicons name="heart" size={40} color={colors.text.primary} />
+              <Text style={styles.optionTitle}>{texts.matching.visual.title}</Text>
               <Text style={styles.optionDescription}>
-                Swipe through profiles and discover connections through photos
+                {texts.matching.visual.subtitle}
               </Text>
             </LinearGradient>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.optionCard} onPress={navigateToTest}>
+          {/* Zodiac Match - Disabled */}
+          <TouchableOpacity 
+            style={[styles.optionCard, styles.disabledCard]} 
+            onPress={navigateToZodiac}
+            disabled={!features.premium.zodiacMatch}
+          >
             <LinearGradient
-              colors={['#E91E63', '#F59E0B']}
+              colors={features.premium.zodiacMatch ? colors.gradients.secondary : [colors.accent.silver, colors.accent.silver]}
               style={styles.optionGradient}>
-              <MaterialIcons name="psychology" size={40} color="#FFFFFF" />
-              <Text style={styles.optionTitle}>Soul Match</Text>
+              <MaterialIcons name="stars" size={40} color={colors.text.primary} />
+              <Text style={styles.optionTitle}>{texts.matching.zodiac.title}</Text>
               <Text style={styles.optionDescription}>
-                Take our AI-powered compatibility test for deeper connections
+                {texts.matching.zodiac.subtitle}
               </Text>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.optionCard} onPress={navigateToZodiac}>
-            <LinearGradient
-              colors={['#10B981', '#059669']}
-              style={styles.optionGradient}>
-              <MaterialIcons name="stars" size={40} color="#FFFFFF" />
-              <Text style={styles.optionTitle}>Zodiac Match</Text>
-              <Text style={styles.optionDescription}>
-                Discover cosmic compatibility through astrological insights
-              </Text>
+              {!features.premium.zodiacMatch && (
+                <View style={styles.premiumBadge}>
+                  <Text style={styles.premiumText}>{texts.matching.zodiac.comingSoon}</Text>
+                </View>
+              )}
             </LinearGradient>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.statsContainer}>
+        {/* Stats Container */}
+        <Card variant="elevated" style={styles.statsContainer}>
           <View style={styles.statItem}>
             <Text style={styles.statNumber}>10K+</Text>
             <Text style={styles.statLabel}>Meaningful Matches</Text>
@@ -91,7 +97,7 @@ export default function HomeScreen() {
             <Text style={styles.statNumber}>24/7</Text>
             <Text style={styles.statLabel}>AI Support</Text>
           </View>
-        </View>
+        </Card>
       </View>
     </View>
   );
@@ -100,100 +106,106 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.background.primary,
   },
   headerGradient: {
-    paddingTop: 60,
-    paddingBottom: 40,
-    paddingHorizontal: 20,
+    paddingTop: spacing.layout.header,
+    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.md,
   },
   header: {
     alignItems: 'center',
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
+    ...typography.styles.h1,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    opacity: 0.9,
+    ...typography.styles.body,
+    color: colors.text.secondary,
   },
   content: {
     flex: 1,
-    padding: 20,
+    padding: spacing.md,
   },
   welcomeSection: {
     alignItems: 'center',
-    marginBottom: 40,
-    paddingHorizontal: 20,
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.md,
   },
   welcomeText: {
-    fontSize: 16,
-    color: '#6B7280',
+    ...typography.styles.body,
+    color: colors.text.tertiary,
     textAlign: 'center',
-    marginTop: 16,
-    lineHeight: 24,
+    marginTop: spacing.md,
+    lineHeight: typography.lineHeights.normal,
   },
   optionsContainer: {
-    gap: 20,
-    marginBottom: 40,
+    gap: spacing.md,
+    marginBottom: spacing.xl,
   },
   optionCard: {
-    borderRadius: 20,
+    borderRadius: spacing.card.borderRadius,
     overflow: 'hidden',
     elevation: 8,
-    shadowColor: '#000',
+    shadowColor: colors.primary[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
   },
+  disabledCard: {
+    opacity: 0.6,
+  },
   optionGradient: {
-    padding: 24,
+    padding: spacing.lg,
     alignItems: 'center',
     minHeight: 160,
     justifyContent: 'center',
+    position: 'relative',
   },
   optionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginTop: 12,
-    marginBottom: 8,
+    ...typography.styles.h4,
+    color: colors.text.primary,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
   },
   optionDescription: {
-    fontSize: 14,
-    color: '#FFFFFF',
+    ...typography.styles.bodySmall,
+    color: colors.text.secondary,
     textAlign: 'center',
-    opacity: 0.9,
-    lineHeight: 20,
+    lineHeight: typography.lineHeights.normal,
+  },
+  premiumBadge: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    backgroundColor: colors.accent.gold,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: spacing.xs,
+  },
+  premiumText: {
+    ...typography.styles.caption,
+    color: colors.text.primary,
+    fontWeight: typography.weights.semibold,
   },
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    padding: spacing.md,
   },
   statItem: {
     alignItems: 'center',
   },
   statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#8B5FBF',
-    marginBottom: 4,
+    ...typography.styles.h3,
+    color: colors.primary[500],
+    marginBottom: spacing.xs,
   },
   statLabel: {
-    fontSize: 12,
-    color: '#6B7280',
+    ...typography.styles.caption,
+    color: colors.text.tertiary,
     textAlign: 'center',
   },
 });
