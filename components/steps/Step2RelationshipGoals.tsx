@@ -82,7 +82,7 @@ export default function Step2RelationshipGoals({
 
       {/* Children Plan */}
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Children plans *</Text>
+        <Text style={styles.inputLabel}>Children plans</Text>
         <OptionGrid
           options={CHILDREN_PLAN_OPTIONS}
           selectedValues={formData.childrenPlan}

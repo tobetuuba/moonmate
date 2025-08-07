@@ -17,7 +17,7 @@ export interface UserProfile {
     longitude: number;
   };
   gender?: string;
-  seeking: string[]; // e.g. ["men", "women", "non-binary"]
+  seeking: string[]; // e.g. ["men", "women", "nonbinary"]
   relationshipGoals?: string[]; // e.g. ["Long-term relationship", "Friendship"]
   bio: string;
   photos: string[];

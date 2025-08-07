@@ -18,7 +18,7 @@ export const step1Schema = yup.object({
   location: yup.object({
     city: yup
       .string()
-      .required('City is required'),
+      .required('Please get your current location'),
     country: yup
       .string()
       .required('Country is required'),
@@ -29,14 +29,15 @@ export const step1Schema = yup.object({
     .optional(),
   gender: yup
     .string()
-    .required('Gender identity is required'),
+    .required('Please select your gender identity'),
   pronouns: yup
     .string()
     .optional(),
-  sexualOrientation: yup
+  seeking: yup
     .array()
     .of(yup.string())
-    .optional(),
+    .min(1, 'Please select what you are looking for')
+    .required('Please select what you are looking for'),
 });
 
 // Step 2: Relationship Goals validation
@@ -49,7 +50,7 @@ export const step2Schema = yup.object({
     .required(),
   childrenPlan: yup
     .string()
-    .required('Children plan is required'),
+    .optional(),
 });
 
 // Step 3: About & Prompts validation
@@ -69,8 +70,7 @@ export const step4Schema = yup.object({
   interests: yup
     .array()
     .of(yup.string())
-    .min(1, 'Please select at least one interest')
-    .required(),
+    .optional(),
   smoking: yup
     .string()
     .optional(),
@@ -124,7 +124,7 @@ export const completeFormSchema = yup.object({
   location: step1Schema.fields.location,
   gender: step1Schema.fields.gender,
   pronouns: step1Schema.fields.pronouns,
-  sexualOrientation: step1Schema.fields.sexualOrientation,
+  seeking: step1Schema.fields.seeking,
   
   // Step 2
   relationshipType: step2Schema.fields.relationshipType,

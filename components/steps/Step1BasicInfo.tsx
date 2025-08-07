@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,25 +8,24 @@ import { spacing } from '../../theme/spacings';
 import OptionGrid from '../OptionGrid';
 import FormError from '../FormError';
 import DatePickerModal from '../DatePickerModal';
-import CityPickerModal from '../CityPickerModal';
 
 // Gender options
 const GENDER_OPTIONS = [
-  { label: 'Woman', value: 'woman' },
-  { label: 'Man', value: 'man' },
-  { label: 'Non-binary', value: 'nonbinary' },
-  { label: 'Gender fluid', value: 'genderfluid' },
-  { label: 'Agender', value: 'agender' },
-  { label: 'Bigender', value: 'bigender' },
-  { label: 'Demiboy', value: 'demiboy' },
-  { label: 'Demigirl', value: 'demigirl' },
-  { label: 'Genderqueer', value: 'genderqueer' },
-  { label: 'Neutrois', value: 'neutrois' },
-  { label: 'Pangender', value: 'pangender' },
-  { label: 'Polygender', value: 'polygender' },
-  { label: 'Two-spirit', value: 'two-spirit' },
-  { label: 'Other', value: 'other' },
-  { label: 'Custom', value: 'custom' },
+  { label: 'Woman', value: 'woman', icon: 'female' },
+  { label: 'Man', value: 'man', icon: 'male' },
+  { label: 'Non-binary', value: 'nonbinary', icon: 'person' },
+  { label: 'Gender fluid', value: 'genderfluid', icon: 'person' },
+  { label: 'Agender', value: 'agender', icon: 'person' },
+  { label: 'Bigender', value: 'bigender', icon: 'person' },
+  { label: 'Demiboy', value: 'demiboy', icon: 'person' },
+  { label: 'Demigirl', value: 'demigirl', icon: 'person' },
+  { label: 'Genderqueer', value: 'genderqueer', icon: 'person' },
+  { label: 'Neutrois', value: 'neutrois', icon: 'person' },
+  { label: 'Pangender', value: 'pangender', icon: 'person' },
+  { label: 'Polygender', value: 'polygender', icon: 'person' },
+  { label: 'Two-spirit', value: 'two-spirit', icon: 'person' },
+  { label: 'Other', value: 'other', icon: 'person' },
+  { label: 'Custom', value: 'custom', icon: 'heart' },
 ];
 
 // Pronoun options
@@ -42,11 +41,24 @@ const PRONOUN_OPTIONS = [
 
 // Seeking options
 const SEEKING_OPTIONS = [
-  { label: 'Men', value: 'men', icon: 'male' },
-  { label: 'Women', value: 'women', icon: 'female' },
-  { label: 'Non-binary', value: 'non-binary', icon: 'person' },
-  { label: 'Everyone', value: 'everyone', icon: 'people' },
+  { label: 'Woman', value: 'woman', icon: 'female' },
+  { label: 'Man', value: 'man', icon: 'male' },
+  { label: 'Non-binary', value: 'nonbinary', icon: 'person' },
+  { label: 'Gender fluid', value: 'genderfluid', icon: 'person' },
+  { label: 'Agender', value: 'agender', icon: 'person' },
+  { label: 'Bigender', value: 'bigender', icon: 'person' },
+  { label: 'Demiboy', value: 'demiboy', icon: 'person' },
+  { label: 'Demigirl', value: 'demigirl', icon: 'person' },
+  { label: 'Genderqueer', value: 'genderqueer', icon: 'person' },
+  { label: 'Neutrois', value: 'neutrois', icon: 'person' },
+  { label: 'Pangender', value: 'pangender', icon: 'person' },
+  { label: 'Polygender', value: 'polygender', icon: 'person' },
+  { label: 'Two-spirit', value: 'two-spirit', icon: 'person' },
+  { label: 'Other', value: 'other', icon: 'person' },
   { label: 'Custom', value: 'custom', icon: 'heart' },
+  { label: 'Everyone', value: 'everyone', icon: 'people' },
+  { label: 'No preference', value: 'no-preference', icon: 'shuffle' },
+  { label: 'Prefer not to say', value: 'no-answer', icon: 'help' },
 ];
 
 import { BasicInfo } from '../../types/profile';
@@ -57,6 +69,7 @@ interface Step1BasicInfoProps {
   updateNestedField: (parentField: keyof BasicInfo, childField: string, value: any) => void;
   errors?: any;
   touched?: Record<string, boolean>;
+  setFieldTouched?: (field: string, touched: boolean) => void;
 }
 
 export default function Step1BasicInfo({
@@ -65,18 +78,26 @@ export default function Step1BasicInfo({
   updateNestedField,
   errors = {},
   touched = {},
+  setFieldTouched,
 }: Step1BasicInfoProps) {
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showCityPicker, setShowCityPicker] = useState(false);
   const nameInputRef = useRef<TextInput>(null);
 
+  // Debug: Check seeking validation
+  useEffect(() => {
+    console.log('errors.seeking:', errors.seeking, 'touched.seeking:', touched.seeking);
+  }, [errors.seeking, touched.seeking]);
+
   const handleDateConfirm = useCallback((date: Date) => {
-    updateFormData('birthDate', date.toISOString().split('T')[0]);
+    // Format date as YYYY-MM-DD in local timezone
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const formattedDate = `${year}-${month}-${day}`;
+    updateFormData('birthDate', formattedDate);
   }, [updateFormData]);
 
-  const handleCityConfirm = useCallback((city: string) => {
-    updateNestedField('location', 'city', city);
-  }, [updateNestedField]);
+
 
   const getCurrentLocation = async () => {
     try {
@@ -111,13 +132,14 @@ export default function Step1BasicInfo({
         updateNestedField('location', 'latitude', location.coords.latitude);
         updateNestedField('location', 'longitude', location.coords.longitude);
         
-        Alert.alert('Success', `Location set to ${cityName}`);
+        // Mark as touched for validation
+        updateFormData('location', { ...formData.location, city: cityName });
       } else {
-        Alert.alert('Error', 'Could not determine your city. Please select manually.');
+        Alert.alert('Error', 'Could not determine your city. Please try again.');
       }
     } catch (error) {
       console.error('Location error:', error);
-      Alert.alert('Error', 'Failed to get your current location. Please select manually.');
+      Alert.alert('Error', 'Failed to get your current location. Please try again.');
     }
   };
   return (
@@ -164,7 +186,7 @@ export default function Step1BasicInfo({
         <TouchableOpacity 
           style={[
             styles.dateButton,
-            errors.birthDate && touched.birthDate && styles.textInputError,
+            errors.birthDate && touched.birthDate && styles.dateButtonError,
           ]}
           onPress={() => setShowDatePicker(true)}
         >
@@ -208,34 +230,23 @@ export default function Step1BasicInfo({
 
       {/* Location */}
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>City *</Text>
+        <Text style={styles.inputLabel}>Location *</Text>
         <TouchableOpacity 
           style={[
             styles.dateButton,
-            errors.location?.city && (touched.location as any)?.city && styles.textInputError,
+            errors.location?.city && touched['location.city'] && styles.dateButtonError,
           ]}
-          onPress={() => setShowCityPicker(true)}
+          onPress={getCurrentLocation}
         >
           <Text style={styles.dateButtonText}>
-            {formData.location.city || 'Select city'}
+            {formData.location.city || 'Get Current Location'}
           </Text>
-          <Ionicons name="location-outline" size={20} color={colors.primary[500]} />
-        </TouchableOpacity>
-        
-        {/* Current Location Button */}
-        <TouchableOpacity 
-          style={styles.currentLocationButton}
-          onPress={getCurrentLocation}
-          accessibilityLabel="Use current location"
-          accessibilityRole="button"
-        >
-          <Ionicons name="navigate" size={16} color={colors.primary[500]} />
-          <Text style={styles.currentLocationText}>Use Current Location</Text>
+          <Ionicons name="locate" size={20} color={colors.primary[500]} />
         </TouchableOpacity>
         
         <FormError 
           error={errors.location?.city?.message} 
-          touched={touched.location as any} 
+          touched={touched['location.city']} 
         />
       </View>
 
@@ -268,16 +279,31 @@ export default function Step1BasicInfo({
           options={GENDER_OPTIONS}
           selectedValues={formData.gender}
           onSelectionChange={(value) => updateFormData('gender', value)}
+          hasError={!!(errors.gender && touched.gender)}
+        />
+        <FormError 
+          error={errors.gender?.message} 
+          touched={touched.gender} 
         />
       </View>
 
       {/* Pronouns */}
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Pronouns</Text>
-        <OptionGrid
-          options={PRONOUN_OPTIONS}
-          selectedValues={formData.pronouns}
-          onSelectionChange={(value) => updateFormData('pronouns', value)}
+        <View style={[
+          styles.optionGridContainer,
+          errors.pronouns && touched.pronouns && styles.optionGridError,
+        ]}>
+          <OptionGrid
+            options={PRONOUN_OPTIONS}
+            selectedValues={formData.pronouns}
+            onSelectionChange={(value) => updateFormData('pronouns', value)}
+            hasError={!!(errors.pronouns && touched.pronouns)}
+          />
+        </View>
+        <FormError 
+          error={errors.pronouns?.message} 
+          touched={touched.pronouns} 
         />
       </View>
 
@@ -287,8 +313,16 @@ export default function Step1BasicInfo({
         <OptionGrid
           options={SEEKING_OPTIONS}
           selectedValues={formData.seeking}
-          onSelectionChange={(value) => updateFormData('seeking', value)}
+          onSelectionChange={(value) => {
+            updateFormData('seeking', value);
+            setFieldTouched?.('seeking', true);
+          }}
           multiSelect={true}
+          hasError={!!(errors.seeking && touched.seeking)}
+        />
+        <FormError 
+          error={errors.seeking} 
+          touched={touched.seeking} 
         />
       </View>
 
@@ -301,13 +335,7 @@ export default function Step1BasicInfo({
         title="Select Birth Date"
       />
 
-      <CityPickerModal
-        visible={showCityPicker}
-        onClose={() => setShowCityPicker(false)}
-        onConfirm={handleCityConfirm}
-        currentCity={formData.location.city}
-        title="Select City"
-              />
+
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -347,6 +375,8 @@ const styles = StyleSheet.create({
   },
   textInputError: {
     borderColor: colors.accent.error,
+    borderWidth: 2,
+    backgroundColor: colors.accent.error + '10',
   },
   dateButton: {
     flexDirection: 'row',
@@ -362,22 +392,24 @@ const styles = StyleSheet.create({
     ...typography.styles.input,
     color: colors.text.primary,
   },
-  currentLocationButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    marginTop: spacing.sm,
-    borderRadius: spacing.button.borderRadius,
-    backgroundColor: colors.background.tertiary,
+  dateButtonError: {
+    borderColor: colors.accent.error,
+    borderWidth: 2,
+    backgroundColor: colors.accent.error + '10',
+  },
+
+  optionGridContainer: {
+    width: '100%',
     borderWidth: 1,
     borderColor: colors.border.secondary,
-    gap: spacing.xs,
+    borderRadius: spacing.input.borderRadius,
+    padding: spacing.sm / 2,
   },
-  currentLocationText: {
-    ...typography.styles.body,
-    color: colors.primary[500],
-    fontWeight: typography.weights.medium,
+  optionGridError: {
+    borderWidth: 2,
+    borderColor: colors.accent.error,
+    borderRadius: spacing.input.borderRadius,
+    padding: spacing.sm,
+    backgroundColor: colors.accent.error + '10',
   },
 });

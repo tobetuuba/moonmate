@@ -273,6 +273,7 @@ const INITIAL_FORM_DATA: FormData = {
 
 export default function CreateProfileNewScreen() {
   const [currentStep, setCurrentStep] = useState(1);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
   const { 
     formData, 
     updateFormData, 
@@ -316,8 +317,22 @@ export default function CreateProfileNewScreen() {
           setCurrentStep(prev => prev + 1);
         });
       } else {
-        // Trigger validation to show errors
+        // Trigger validation to show errors and mark all fields as touched
         await validateCurrentStep(currentStep);
+        // Mark all fields in current step as touched
+        const stepFields = getStepFieldsForTouched(currentStep);
+        const newTouched: Record<string, boolean> = {};
+        stepFields.forEach((field: string) => {
+          // Handle nested fields like 'location.city'
+          if (field.includes('.')) {
+            const [parent, child] = field.split('.');
+            newTouched[field] = true;
+          } else {
+            newTouched[field] = true;
+          }
+        });
+        setTouched(prev => ({ ...prev, ...newTouched }));
+        // Don't proceed to next step, just show errors
       }
     } else {
       handleSubmit();
@@ -332,9 +347,27 @@ export default function CreateProfileNewScreen() {
     }
   }, [currentStep, animateStepTransition]);
 
-  const handleSkip = useCallback(() => {
-    handleNext();
-  }, [handleNext]);
+
+
+  // Get step fields for touched state
+  const getStepFieldsForTouched = useCallback((step: number): string[] => {
+    switch (step) {
+      case 1:
+        return ['displayName', 'birthDate', 'location.city', 'gender', 'seeking'];
+      case 2:
+        return ['relationshipType'];
+      case 3:
+        return ['bio'];
+      case 4:
+        return ['interests'];
+      case 5:
+        return [];
+      case 6:
+        return ['acceptTerms', 'acceptPrivacy'];
+      default:
+        return [];
+    }
+  }, []);
 
 
 
@@ -350,7 +383,7 @@ export default function CreateProfileNewScreen() {
 
       {/* Interests */}
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Hobbies and Interests *</Text>
+        <Text style={styles.inputLabel}>Hobbies and Interests</Text>
         <View style={styles.optionsGrid}>
           {INTEREST_OPTIONS.map((interest) => (
             <TouchableOpacity
@@ -466,6 +499,10 @@ export default function CreateProfileNewScreen() {
             updateFormData={updateFormData}
             updateNestedField={updateNestedField}
             errors={errors}
+            touched={touched}
+            setFieldTouched={(field: string, touched: boolean) => {
+              setTouched(prev => ({ ...prev, [field]: touched }));
+            }}
           />
         );
       case 2:
@@ -481,6 +518,7 @@ export default function CreateProfileNewScreen() {
             formData={formData}
             updateFormData={updateFormData}
             errors={errors}
+            touched={touched}
           />
         );
       case 4:
@@ -529,7 +567,7 @@ export default function CreateProfileNewScreen() {
           enableOnAndroid={true}
           enableAutomaticScroll={true}
           keyboardShouldPersistTaps="handled"
-          extraScrollHeight={150}
+          extraScrollHeight={100}
           keyboardDismissMode="interactive"
           keyboardOpeningTime={0}
         >
@@ -542,8 +580,7 @@ export default function CreateProfileNewScreen() {
           onBack={handleBack}
           onNext={handleNext}
           nextButtonDisabled={isSubmitting}
-          showSkip={currentStep < 6}
-          onSkip={handleSkip}
+          showSkip={false}
         />
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -559,7 +596,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.md,
   },
   stepContainer: {
     paddingHorizontal: spacing.md,
@@ -792,4 +829,5 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: typography.lineHeights.normal,
   },
+
 });

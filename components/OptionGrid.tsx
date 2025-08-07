@@ -17,6 +17,7 @@ interface OptionGridProps {
   onSelectionChange: (value: string | string[]) => void;
   multiSelect?: boolean;
   maxSelections?: number;
+  hasError?: boolean;
 }
 
 export default function OptionGrid({
@@ -25,6 +26,7 @@ export default function OptionGrid({
   onSelectionChange,
   multiSelect = false,
   maxSelections,
+  hasError = false,
 }: OptionGridProps) {
   const { colors } = useTheme();
   const isSelected = (value: string) => {
@@ -51,13 +53,17 @@ export default function OptionGrid({
   const styles = createStyles(colors);
   
   return (
-    <View style={styles.container}>
+    <View style={[
+      styles.container,
+      hasError && styles.containerError,
+    ]}>
       {options.map((option) => (
         <TouchableOpacity
           key={option.value}
           style={[
             styles.optionChip,
             isSelected(option.value) && styles.optionChipSelected,
+            hasError && styles.optionChipError,
           ]}
           onPress={() => handleOptionPress(option.value)}
           accessibilityLabel={`${option.label} option`}
@@ -115,5 +121,15 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   optionIcon: {
     marginRight: spacing.xs,
+  },
+  containerError: {
+    borderWidth: 2,
+    borderColor: colors.accent.error,
+    borderRadius: spacing.input.borderRadius,
+    padding: spacing.sm,
+    backgroundColor: colors.accent.error + '10',
+  },
+  optionChipError: {
+    borderColor: colors.accent.error,
   },
 });

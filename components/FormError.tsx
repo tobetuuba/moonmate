@@ -6,19 +6,22 @@ import { typography } from '../theme/typography';
 import { spacing } from '../theme/spacings';
 
 interface FormErrorProps {
-  error?: string;
+  error?: string | { message?: string };
   touched?: boolean;
 }
 
 export default function FormError({ error, touched }: FormErrorProps) {
-  if (!error || !touched) {
+  // Handle both string and object error types
+  const errorMessage = typeof error === 'string' ? error : error?.message;
+  
+  if (!errorMessage || !touched) {
     return null;
   }
 
   return (
     <View style={styles.container}>
       <Ionicons name="alert-circle" size={14} color={colors.accent.error} />
-      <Text style={styles.errorText}>{error}</Text>
+      <Text style={styles.errorText}>{errorMessage}</Text>
     </View>
   );
 }

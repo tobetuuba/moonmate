@@ -70,7 +70,7 @@ export default function Step4InterestsLifestyle({
 
       {/* Interests */}
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Hobbies and Interests *</Text>
+        <Text style={styles.inputLabel}>Hobbies and Interests</Text>
         <OptionGrid
           options={INTEREST_OPTIONS}
           selectedValues={formData.interests}

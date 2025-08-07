@@ -75,6 +75,7 @@ export function useCreateProfileForm() {
     resolver: yupResolver(completeFormSchema as any),
     defaultValues: INITIAL_FORM_DATA,
     mode: 'onChange',
+    reValidateMode: 'onChange',
   });
 
   const formData = watch();
@@ -100,13 +101,13 @@ export function useCreateProfileForm() {
   const getStepFields = (step: number): (keyof FormData)[] => {
     switch (step) {
       case 1:
-        return ['displayName', 'birthDate', 'location', 'gender'];
+        return ['displayName', 'birthDate', 'location', 'gender', 'seeking'];
       case 2:
-        return ['relationshipType', 'childrenPlan'];
+        return ['relationshipType']; // Only relationshipType is required
       case 3:
         return ['bio']; // Only bio is required, prompts are optional
       case 4:
-        return ['interests'];
+        return []; // Interests are optional
       case 5:
         return []; // Photos are optional for now
       case 6:
@@ -140,7 +141,7 @@ export function useCreateProfileForm() {
         birthTime: data.birthTime,
         location: data.location,
         gender: data.gender,
-        seeking: [], // Will be set separately
+        seeking: data.seeking, // Now it's an array
         relationshipGoals: [data.relationshipType],
         bio: data.bio,
         photos: data.photos,
