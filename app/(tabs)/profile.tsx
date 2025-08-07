@@ -86,6 +86,7 @@ const DEFAULT_PROFILE: UserProfile = {
     'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg',
   ],
   interests: ['music', 'travel', 'cooking'],
+  customInterests: ['Astronomy', 'Board games'],
   smoking: 'Never',
   drinking: 'Socially',
   diet: 'Vegetarian',
@@ -445,18 +446,18 @@ export default function ProfileScreen() {
           onEditPress={() => setShowLookingForModal(true)}
         >
           <View style={styles.lookingForContainer}>
-            {userProfile.relationshipGoals?.map((goal, index) => (
-              <View key={index} style={styles.lookingForItem}>
+            {userProfile.relationshipGoals && userProfile.relationshipGoals.length > 0 && (
+              <View style={styles.lookingForItem}>
                 <Ionicons name="heart" size={20} color={colors.primary[500]} />
-                <Text style={styles.lookingForText}>{goal}</Text>
+                <Text style={styles.lookingForText}>{userProfile.relationshipGoals.join(', ')}</Text>
               </View>
-            ))}
-            {userProfile.seeking?.map((preference, index) => (
-              <View key={`seeking-${index}`} style={styles.lookingForItem}>
+            )}
+            {userProfile.seeking && userProfile.seeking.length > 0 && (
+              <View style={styles.lookingForItem}>
                 <Ionicons name="people" size={20} color={colors.secondary[500]} />
-                <Text style={styles.lookingForText}>Interested in {preference}</Text>
+                <Text style={styles.lookingForText}>Interested in {userProfile.seeking.join(', ')}</Text>
               </View>
-            ))}
+            )}
             {userProfile.monogamy !== undefined && (
               <View style={styles.lookingForItem}>
                 <Ionicons name="checkmark-circle" size={20} color={colors.accent.success} />
@@ -552,6 +553,15 @@ export default function ProfileScreen() {
             onInterestToggle={handleInterestToggle}
             maxSelections={MAX_INTERESTS}
           />
+          {/* Custom Interests */}
+          {userProfile.customInterests && userProfile.customInterests.length > 0 && (
+            <View style={styles.customInterestsContainer}>
+              <Text style={styles.customInterestsLabel}>Custom interests:</Text>
+              <Text style={styles.customInterestsText}>
+                {userProfile.customInterests.join(', ')}
+              </Text>
+            </View>
+          )}
         </ProfileSection>
 
         {/* Social Links */}
@@ -799,5 +809,22 @@ const styles = StyleSheet.create({
     ...typography.styles.body,
     color: colors.text.primary,
     flex: 1,
+  },
+  customInterestsContainer: {
+    marginTop: spacing.md,
+    padding: spacing.sm,
+    backgroundColor: colors.background.secondary,
+    borderRadius: spacing.input.borderRadius,
+  },
+  customInterestsLabel: {
+    ...typography.styles.caption,
+    color: colors.text.secondary,
+    marginBottom: spacing.xs,
+    fontWeight: typography.weights.medium,
+  },
+  customInterestsText: {
+    ...typography.styles.body,
+    color: colors.text.primary,
+    lineHeight: typography.lineHeights.relaxed,
   },
 });
