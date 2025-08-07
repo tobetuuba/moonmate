@@ -141,7 +141,7 @@ export function useCreateProfileForm() {
         birthTime: data.birthTime,
         location: data.location,
         gender: data.gender,
-        seeking: data.seeking, // Now it's an array
+        seeking: data.seeking,
         relationshipGoals: [data.relationshipType],
         bio: data.bio,
         photos: data.photos,
@@ -150,6 +150,27 @@ export function useCreateProfileForm() {
         socialLinks: {},
         createdAt: new Date(),
         updatedAt: new Date(),
+        // Add all the missing fields from the form
+        height: data.height,
+        profession: data.profession,
+        pronouns: data.pronouns,
+        customGender: data.customGender,
+        customPronouns: data.customPronouns,
+        customSeeking: data.customSeeking,
+        monogamy: data.monogamy,
+        childrenPlan: data.childrenPlan,
+        childrenPlanDetails: data.childrenPlanDetails,
+        prompts: data.prompts,
+        customInterests: data.customInterests,
+        smoking: data.smoking,
+        drinking: data.drinking,
+        diet: data.diet,
+        exercise: data.exercise,
+        showOrientation: data.showOrientation,
+        showGender: data.showGender,
+        incognitoMode: data.incognitoMode,
+        acceptTerms: data.acceptTerms,
+        acceptPrivacy: data.acceptPrivacy,
       };
 
       await ProfileService.createUserProfile(profileData);

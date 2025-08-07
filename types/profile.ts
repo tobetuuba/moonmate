@@ -4,6 +4,8 @@ export interface UserProfile {
   age: number;
   birthDate?: string; // YYYY-MM-DD format
   birthTime?: string; // HH:MM format
+  height?: number; // cm
+  profession?: string;
   birthPlace?: {
     city: string;
     country: string;
@@ -17,9 +19,17 @@ export interface UserProfile {
     longitude: number;
   };
   gender?: string;
+  customGender?: string;
+  pronouns?: string;
+  customPronouns?: string;
   seeking: string[]; // e.g. ["men", "women", "nonbinary"]
+  customSeeking?: string;
   relationshipGoals?: string[]; // e.g. ["Long-term relationship", "Friendship"]
+  monogamy?: boolean;
+  childrenPlan?: string;
+  childrenPlanDetails?: string;
   bio: string;
+  prompts?: { [key: string]: string };
   photos: string[];
   profilePhotoUrl?: string;
   personality?: {
@@ -27,7 +37,17 @@ export interface UserProfile {
     openness: number;
   };
   interests: string[];
+  customInterests?: string[];
+  smoking?: string;
+  drinking?: string;
+  diet?: string;
+  exercise?: string;
   socialLinks: SocialLinks;
+  showOrientation?: boolean;
+  showGender?: boolean;
+  incognitoMode?: boolean;
+  acceptTerms?: boolean;
+  acceptPrivacy?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
