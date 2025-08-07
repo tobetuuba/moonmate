@@ -25,20 +25,14 @@ export function useProfileCheck() {
       setHasProfile(profileExists);
       
       if (!profileExists) {
-        // Only redirect if we're not already on the create-profile page
-        const currentPath = router.getCurrentPath();
-        if (currentPath !== '/create-profile') {
-          router.replace('/create-profile');
-        }
+        // Redirect to create profile if no profile exists
+        router.replace('/create-profile-new');
       }
     } catch (error) {
       console.error('Error checking profile:', error);
       // If there's an error, assume no profile and redirect
       setHasProfile(false);
-      const currentPath = router.getCurrentPath();
-      if (currentPath !== '/create-profile') {
-        router.replace('/create-profile');
-      }
+      router.replace('/create-profile-new');
     } finally {
       setIsLoading(false);
     }

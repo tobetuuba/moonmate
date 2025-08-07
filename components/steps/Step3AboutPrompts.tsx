@@ -1,0 +1,173 @@
+import React, { useCallback } from 'react';
+import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { colors } from '../../theme/colors';
+import { typography } from '../../theme/typography';
+import { spacing } from '../../theme/spacings';
+import FormError from '../FormError';
+
+// Prompt options
+const PROMPT_OPTIONS = [
+  {
+    id: 'ideal-date',
+    question: 'What would your ideal first date be like?',
+    icon: 'heart',
+  },
+  {
+    id: 'life-goal',
+    question: 'What\'s your biggest life goal?',
+    icon: 'star',
+  },
+  {
+    id: 'simple-pleasure',
+    question: 'What simple thing makes you happiest?',
+    icon: 'sunny',
+  },
+  {
+    id: 'travel-dream',
+    question: 'Where do you most want to travel?',
+    icon: 'airplane',
+  },
+  {
+    id: 'fun-fact',
+    question: 'What\'s an interesting fact about you that people don\'t know?',
+    icon: 'bulb',
+  },
+];
+
+interface Step3AboutPromptsProps {
+  formData: {
+    bio: string;
+    prompts: {
+      [key: string]: string;
+    };
+  };
+  updateFormData: (field: any, value: any) => void;
+  errors?: any;
+  touched?: Record<string, boolean>;
+}
+
+export default function Step3AboutPrompts({
+  formData,
+  updateFormData,
+  errors = {},
+  touched = {},
+}: Step3AboutPromptsProps) {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.sectionTitle}>About You</Text>
+
+      {/* Bio */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>Tell us about yourself *</Text>
+        <TextInput
+          style={[
+            styles.textInput, 
+            styles.textArea,
+            errors.bio && touched.bio && styles.textInputError,
+          ]}
+          value={formData.bio}
+          onChangeText={useCallback((text: string) => updateFormData('bio', text), [updateFormData])}
+          placeholder="Tell us about yourself... (10-500 characters)"
+          multiline
+          numberOfLines={4}
+          maxLength={500}
+          placeholderTextColor={colors.text.tertiary}
+        />
+        <Text style={styles.charCount}>{formData.bio.length}/500</Text>
+        <FormError 
+          error={errors.bio?.message} 
+          touched={touched.bio} 
+        />
+      </View>
+
+      <Text style={styles.sectionTitle}>Questions (Choose 3/5)</Text>
+      
+      {/* Prompts Error */}
+      <FormError 
+        error={errors.prompts?.message} 
+        touched={touched.prompts} 
+      />
+
+      {/* Prompts */}
+      {PROMPT_OPTIONS.map((prompt) => (
+        <View key={prompt.id} style={styles.inputGroup}>
+          <View style={styles.promptHeader}>
+            <Ionicons name={prompt.icon as any} size={20} color={colors.primary[500]} />
+            <Text style={styles.promptQuestion}>{prompt.question}</Text>
+          </View>
+          <TextInput
+            style={[styles.textInput, styles.textArea]}
+            value={formData.prompts[prompt.id] || ''}
+            onChangeText={useCallback((text: string) => updateFormData('prompts', {
+              ...formData.prompts,
+              [prompt.id]: text,
+            }), [updateFormData, formData.prompts, prompt.id])}
+            placeholder="Write your answer... (max 225 characters)"
+            multiline
+            numberOfLines={3}
+            maxLength={225}
+            placeholderTextColor={colors.text.tertiary}
+          />
+          <Text style={styles.charCount}>
+            {(formData.prompts[prompt.id] || '').length}/225
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    paddingHorizontal: spacing.md,
+  },
+  sectionTitle: {
+    ...typography.styles.h4,
+    color: colors.text.primary,
+    marginTop: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  inputGroup: {
+    marginBottom: spacing.lg,
+  },
+  inputLabel: {
+    ...typography.styles.body,
+    color: colors.text.primary,
+    marginBottom: spacing.sm,
+    fontWeight: typography.weights.medium,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: colors.border.secondary,
+    borderRadius: spacing.input.borderRadius,
+    padding: spacing.input.paddingHorizontal,
+    backgroundColor: colors.background.secondary,
+    color: colors.text.primary,
+    ...typography.styles.input,
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  charCount: {
+    ...typography.styles.caption,
+    color: colors.text.tertiary,
+    textAlign: 'right',
+    marginTop: spacing.xs,
+  },
+  promptHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+    gap: spacing.xs,
+  },
+  promptQuestion: {
+    ...typography.styles.body,
+    color: colors.text.primary,
+    fontWeight: typography.weights.medium,
+  },
+  textInputError: {
+    borderColor: colors.accent.error,
+  },
+});

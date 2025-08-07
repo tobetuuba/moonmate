@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
+    "@hookform/resolvers": "^5.2.1",
     "@lucide/lab": "^0.1.2",
     "@react-native-async-storage/async-storage": "^1.24.0",
     "@react-native-community/datetimepicker": "^8.4.3",
@@ -40,18 +41,21 @@
     "react": "19.0.0",
     "react-async-hook": "^4.0.0",
     "react-dom": "19.0.0",
+    "react-hook-form": "^7.62.0",
     "react-native": "0.79.1",
     "react-native-blob-util": "^0.22.2",
     "react-native-country-picker-modal": "^2.0.0",
     "react-native-gesture-handler": "~2.24.0",
     "react-native-get-random-values": "^1.11.0",
+    "react-native-keyboard-aware-scroll-view": "^0.9.5",
     "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "5.3.0",
     "react-native-screens": "~4.10.0",
     "react-native-svg": "15.11.2",
     "react-native-url-polyfill": "^2.0.0",
     "react-native-web": "^0.20.0",
-    "react-native-webview": "13.13.5"
+    "react-native-webview": "13.13.5",
+    "yup": "^1.7.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
