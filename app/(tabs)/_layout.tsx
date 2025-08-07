@@ -5,8 +5,20 @@ import { FontAwesome } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacings';
 import TabIcon from '../../components/TabIcon';
+import { useProfileCheck } from '../../hooks/useProfileCheck';
+import { View, ActivityIndicator } from 'react-native';
 
 export default function TabLayout() {
+  const { isLoading } = useProfileCheck();
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={colors.primary[500]} />
+      </View>
+    );
+  }
+
   return (
     <Tabs
       screenOptions={{

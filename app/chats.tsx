@@ -19,6 +19,7 @@ import {
 import { db, auth } from '../services/firebase';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useProfileCheck } from '../hooks/useProfileCheck';
 
 interface Chat {
   id: string;
@@ -38,6 +39,7 @@ interface Chat {
 
 export default function ChatsScreen() {
   const router = useRouter();
+  const { isLoading: isProfileChecking, hasProfile } = useProfileCheck();
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -168,11 +170,19 @@ export default function ChatsScreen() {
     );
   };
 
-  if (loading) {
+  if (isProfileChecking || loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#6366f1" />
         <Text style={styles.loadingText}>Loading chats...</Text>
+      </View>
+    );
+  }
+
+  if (!hasProfile) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Please create your profile first</Text>
       </View>
     );
   }

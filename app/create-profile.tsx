@@ -426,7 +426,7 @@ export default function CreateProfileScreen() {
         await ProfileService.createUserProfile(profileData);
         console.log('✅ Profile created successfully');
         Alert.alert('Success', 'Profile created successfully!', [
-          { text: 'OK', onPress: () => router.replace('/(tabs)') }
+          { text: 'OK', onPress: () => router.replace('/(tabs)/index') }
         ]);
       }
     } catch (error) {

@@ -27,6 +27,7 @@ import useAuth from '../../hooks/useAuth';
 import { UserProfile, ToastMessage } from '../../types/profile';
 import { MAX_INTERESTS } from '../../constants/interests';
 import { ProfileService } from '../../services/api/ProfileService';
+import { useProfileCheck } from '../../hooks/useProfileCheck';
 
 // Helper function to calculate age from birthDate
 const calculateAge = (birthDate?: string): number => {
@@ -80,6 +81,7 @@ const DEFAULT_PROFILE: UserProfile = {
 
 export default function ProfileScreen() {
   const { user, isAuthenticated } = useAuth();
+  const { isLoading: isProfileChecking, hasProfile } = useProfileCheck();
   const [isOwnProfile] = useState(true); // For now, always show own profile
   const [isEditing, setIsEditing] = useState(false);
   const [showBioModal, setShowBioModal] = useState(false);
@@ -224,11 +226,19 @@ export default function ProfileScreen() {
     );
   }
 
-  if (isLoading) {
+  if (isProfileChecking || isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary[500]} />
         <Text style={styles.loadingText}>Loading your profile...</Text>
+      </View>
+    );
+  }
+
+  if (!hasProfile) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.authMessage}>Please create your profile first</Text>
       </View>
     );
   }

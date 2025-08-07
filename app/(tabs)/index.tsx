@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -11,8 +11,11 @@ import { texts } from '../../constants/texts';
 import { features } from '../../constants/features';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
+import { useProfileCheck } from '../../hooks/useProfileCheck';
 
 export default function HomeScreen() {
+  const { isLoading, hasProfile } = useProfileCheck();
+
   const navigateToVisualMatch = () => {
     router.push('/visual-match');
   };
@@ -21,6 +24,27 @@ export default function HomeScreen() {
     // TODO: Implement premium feature check
     console.log('Zodiac Match - Premium feature');
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary[500]} />
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (!hasProfile) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Please create your profile first</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -107,6 +131,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.primary,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    ...typography.styles.body,
+    color: colors.text.secondary,
+    marginTop: spacing.md,
   },
   headerGradient: {
     paddingTop: spacing.layout.header,

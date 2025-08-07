@@ -5,6 +5,11 @@ import useSwipeActions from '../hooks/useSwipeActions';
 import { auth } from '../services/firebase';
 import createOrGetChat from '../utils/createOrGetChat';
 import { useRouter } from 'expo-router';
+import { useProfileCheck } from '../hooks/useProfileCheck';
+import { View, Text, ActivityIndicator } from 'react-native';
+import { colors } from '../theme/colors';
+import { typography } from '../theme/typography';
+import { spacing } from '../theme/spacings';
 
 // Sample user data for demonstration
 const sampleUsers = [
@@ -57,6 +62,7 @@ const sampleUsers = [
 
 export default function VisualMatchPage() {
   const router = useRouter();
+  const { isLoading: isProfileChecking, hasProfile } = useProfileCheck();
   const [isLoading, setIsLoading] = useState(false);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchedUserPhoto, setMatchedUserPhoto] = useState('');
@@ -106,6 +112,27 @@ export default function VisualMatchPage() {
       console.error('❌ Failed to store pass in Firebase:', error);
     }
   };
+
+  if (isProfileChecking) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={colors.primary[500]} />
+        <Text style={{ marginTop: spacing.md, ...typography.styles.body, color: colors.text.secondary }}>
+          Loading...
+        </Text>
+      </View>
+    );
+  }
+
+  if (!hasProfile) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ ...typography.styles.body, color: colors.text.secondary }}>
+          Please create your profile first
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <>

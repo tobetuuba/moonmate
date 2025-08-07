@@ -7,9 +7,11 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider } from '../context/AuthContext';
 import { NotificationProvider } from '../context/NotificationContext';
+import { useProfileCheck } from '../hooks/useProfileCheck';
 
 export default function RootLayout() {
   useFrameworkReady();
+  const { isLoading } = useProfileCheck();
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -18,6 +20,7 @@ export default function RootLayout() {
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="login" />
             <Stack.Screen name="signup" />
+            <Stack.Screen name="create-profile" />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="+not-found" />
           </Stack>
