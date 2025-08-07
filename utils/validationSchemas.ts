@@ -52,11 +52,7 @@ export const step3Schema = yup.object({
     .max(500, 'Bio must be less than 500 characters'),
   prompts: yup
     .object()
-    .test('at-least-3-prompts', 'Please answer at least 3 questions', function(value) {
-      if (!value) return false;
-      const answeredPrompts = Object.values(value).filter(answer => answer && answer.trim().length > 0);
-      return answeredPrompts.length >= 3;
-    }),
+    .optional(),
 });
 
 // Step 4: Interests & Lifestyle validation

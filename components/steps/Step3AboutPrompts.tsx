@@ -97,13 +97,9 @@ export default function Step3AboutPrompts({
         />
       </View>
 
-      <Text style={styles.sectionTitle}>Questions (Choose 3/5)</Text>
+      <Text style={styles.sectionTitle}>Questions (Optional)</Text>
       
-      {/* Prompts Error */}
-      <FormError 
-        error={errors.prompts?.message} 
-        touched={touched.prompts} 
-      />
+      {/* Prompts Error - Removed since prompts are now optional */}
 
       {/* Prompts */}
       {PROMPT_OPTIONS.map((prompt) => (
@@ -119,7 +115,7 @@ export default function Step3AboutPrompts({
               ...formData.prompts,
               [prompt.id]: text,
             }), [updateFormData, formData.prompts, prompt.id])}
-            placeholder="Write your answer... (max 225 characters)"
+            placeholder="Write your answer... (optional, max 225 characters)"
             multiline
             numberOfLines={3}
             maxLength={225}

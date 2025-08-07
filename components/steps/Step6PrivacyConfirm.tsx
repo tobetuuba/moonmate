@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -61,21 +61,38 @@ export default function Step6PrivacyConfirm({
         </View>
 
         <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>Incognito mode: Only show when I like someone</Text>
+          <View style={styles.toggleLabelContainer}>
+            <View style={styles.premiumLabelContainer}>
+              <Text style={styles.toggleLabel}>Incognito mode: Only show when I like someone</Text>
+              <View style={styles.premiumBadge}>
+                <Ionicons name="diamond" size={12} color={colors.accent.gold} />
+                <Text style={styles.premiumText}>PREMIUM</Text>
+              </View>
+            </View>
+          </View>
           <TouchableOpacity
             style={[
               styles.toggleSwitch,
-              formData.incognitoMode && styles.toggleSwitchActive,
+              styles.toggleSwitchDisabled,
             ]}
-            onPress={useCallback(() => updateFormData('incognitoMode', !formData.incognitoMode), [updateFormData, formData.incognitoMode])}
-            accessibilityLabel="Incognito mode toggle"
-            accessibilityRole="switch"
-            accessibilityState={{ checked: formData.incognitoMode }}
+            onPress={() => {
+              Alert.alert(
+                'Premium Feature',
+                'Incognito Mode is a premium feature. Upgrade to MoonMate Premium to use this feature.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Upgrade', onPress: () => {
+                    // TODO: Navigate to premium upgrade screen
+                    Alert.alert('Coming Soon', 'Premium upgrade will be available soon!');
+                  }}
+                ]
+              );
+            }}
+            accessibilityLabel="Incognito mode premium toggle"
+            accessibilityRole="button"
+            accessibilityState={{ disabled: true }}
           >
-            <View style={[
-              styles.toggleThumb,
-              formData.incognitoMode && styles.toggleThumbActive,
-            ]} />
+            <View style={styles.toggleThumb} />
           </TouchableOpacity>
         </View>
       </View>
@@ -187,6 +204,35 @@ const styles = StyleSheet.create({
   },
   toggleThumbActive: {
     transform: [{ translateX: 22 }],
+  },
+  toggleSwitchDisabled: {
+    backgroundColor: colors.background.tertiary,
+    opacity: 0.6,
+  },
+  toggleLabelContainer: {
+    flex: 1,
+    marginRight: spacing.md,
+  },
+  premiumLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+  },
+  premiumBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.accent.gold + '20',
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: 4,
+    gap: 2,
+  },
+  premiumText: {
+    ...typography.styles.caption,
+    color: colors.accent.gold,
+    fontWeight: typography.weights.bold,
+    fontSize: 10,
   },
   checkboxRow: {
     flexDirection: 'row',
