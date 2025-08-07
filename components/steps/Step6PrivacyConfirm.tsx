@@ -4,6 +4,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacings';
+import { useTheme } from '../../context/ThemeContext';
+
+// Fallback colors for debugging
+const fallbackColors = {
+  text: {
+    primary: '#FFFFFF',
+    secondary: '#E5E7EB',
+  }
+};
 
 import { PrivacyConfirm } from '../../types/profile';
 
@@ -16,6 +25,8 @@ export default function Step6PrivacyConfirm({
   formData,
   updateFormData,
 }: Step6PrivacyConfirmProps) {
+  const { colors: themeColors } = useTheme();
+  
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>Privacy Settings</Text>
@@ -102,41 +113,59 @@ export default function Step6PrivacyConfirm({
       {/* Consent checkboxes */}
       <View style={styles.inputGroup}>
         <TouchableOpacity
-          style={styles.checkboxRow}
+          style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16, gap: 8, paddingVertical: 4 }}
           onPress={useCallback(() => updateFormData('acceptTerms', !formData.acceptTerms), [updateFormData, formData.acceptTerms])}
+          activeOpacity={0.7}
           accessibilityLabel="Accept terms and conditions checkbox"
           accessibilityRole="checkbox"
           accessibilityState={{ checked: formData.acceptTerms }}
         >
-          <View style={[
-            styles.checkbox,
-            formData.acceptTerms && styles.checkboxChecked,
-          ]}>
+          <View style={{
+            width: 22,
+            height: 22,
+            borderRadius: 4,
+            borderWidth: 2,
+            borderColor: '#4B5563',
+            backgroundColor: formData.acceptTerms ? '#8B5CF6' : '#1A1A2E',
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginTop: 2,
+            flexShrink: 0,
+          }}>
             {formData.acceptTerms && (
-              <Ionicons name="checkmark" size={16} color={colors.text.white} />
+              <Ionicons name="checkmark" size={16} color="#FFFFFF" />
             )}
           </View>
-          <Text style={styles.checkboxLabel}>
+          <Text style={{ color: colors.text.primary, fontSize: 16, flex: 1, lineHeight: 24, fontWeight: '500' }}>
             I accept the community guidelines and terms of service
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.checkboxRow}
+          style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16, gap: 8, paddingVertical: 4 }}
           onPress={useCallback(() => updateFormData('acceptPrivacy', !formData.acceptPrivacy), [updateFormData, formData.acceptPrivacy])}
+          activeOpacity={0.7}
           accessibilityLabel="Accept privacy policy checkbox"
           accessibilityRole="checkbox"
           accessibilityState={{ checked: formData.acceptPrivacy }}
         >
-          <View style={[
-            styles.checkbox,
-            formData.acceptPrivacy && styles.checkboxChecked,
-          ]}>
+          <View style={{
+            width: 22,
+            height: 22,
+            borderRadius: 4,
+            borderWidth: 2,
+            borderColor: '#4B5563',
+            backgroundColor: formData.acceptPrivacy ? '#8B5CF6' : '#1A1A2E',
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginTop: 2,
+            flexShrink: 0,
+          }}>
             {formData.acceptPrivacy && (
-              <Ionicons name="checkmark" size={16} color={colors.text.white} />
+              <Ionicons name="checkmark" size={16} color="#FFFFFF" />
             )}
           </View>
-          <Text style={styles.checkboxLabel}>
+          <Text style={{ color: colors.text.primary, fontSize: 16, flex: 1, lineHeight: 24, fontWeight: '500' }}>
             I accept the privacy policy and data processing
           </Text>
         </TouchableOpacity>
@@ -259,7 +288,7 @@ const styles = StyleSheet.create({
   },
   checkboxLabel: {
     ...typography.styles.body,
-    color: colors.text.primary,
+    color: '#FFFFFF', // Force white color for visibility
     flex: 1,
     lineHeight: typography.lineHeights.normal,
     fontWeight: typography.weights.medium,

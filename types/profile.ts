@@ -82,12 +82,14 @@ export interface BasicInfo {
   displayName: string;
   birthDate: string;
   birthTime: string;
+  height?: number;
   location: {
     city: string;
     country: string;
     latitude: number;
     longitude: number;
   };
+  profession?: string;
   gender: string;
   customGender?: string;
   pronouns: string;
@@ -143,12 +145,14 @@ export interface CreateProfileFormData {
   displayName: string;
   birthDate: string;
   birthTime: string;
+  height?: number;
   location: {
     city: string;
     country: string;
     latitude: number;
     longitude: number;
   };
+  profession?: string;
   gender: string;
   customGender?: string;
   pronouns: string;

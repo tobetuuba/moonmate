@@ -10,6 +10,11 @@ export const step1Schema = yup.object({
   birthDate: yup
     .string()
     .required('Birth date is required'),
+  height: yup
+    .number()
+    .min(100, 'Height must be at least 100 cm')
+    .max(250, 'Height must be less than 250 cm')
+    .optional(),
   location: yup.object({
     city: yup
       .string()
@@ -18,6 +23,10 @@ export const step1Schema = yup.object({
       .string()
       .required('Country is required'),
   }),
+  profession: yup
+    .string()
+    .max(50, 'Profession must be less than 50 characters')
+    .optional(),
   gender: yup
     .string()
     .required('Gender identity is required'),

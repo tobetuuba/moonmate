@@ -450,97 +450,10 @@ export default function CreateProfileNewScreen() {
 
   const renderStep6 = () => (
     <Animated.View style={[styles.stepContainer, { opacity: fadeAnim }]}>
-      <Text style={styles.sectionTitle}>Privacy Settings</Text>
-
-      {/* Privacy toggles */}
-      <View style={styles.inputGroup}>
-        <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>Show my sexual orientation</Text>
-          <TouchableOpacity
-            style={[
-              styles.toggleSwitch,
-              formData.showOrientation && styles.toggleSwitchActive,
-            ]}
-            onPress={() => updateFormData('showOrientation', !formData.showOrientation)}
-          >
-            <View style={[
-              styles.toggleThumb,
-              formData.showOrientation && styles.toggleThumbActive,
-            ]} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>Show my gender identity</Text>
-          <TouchableOpacity
-            style={[
-              styles.toggleSwitch,
-              formData.showGender && styles.toggleSwitchActive,
-            ]}
-            onPress={() => updateFormData('showGender', !formData.showGender)}
-          >
-            <View style={[
-              styles.toggleThumb,
-              formData.showGender && styles.toggleThumbActive,
-            ]} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>Incognito mode: Only show when I like someone</Text>
-          <TouchableOpacity
-            style={[
-              styles.toggleSwitch,
-              formData.incognitoMode && styles.toggleSwitchActive,
-            ]}
-            onPress={() => updateFormData('incognitoMode', !formData.incognitoMode)}
-          >
-            <View style={[
-              styles.toggleThumb,
-              formData.incognitoMode && styles.toggleThumbActive,
-            ]} />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <Text style={styles.sectionTitle}>Consent</Text>
-
-      {/* Consent checkboxes */}
-      <View style={styles.inputGroup}>
-        <TouchableOpacity
-          style={styles.checkboxRow}
-          onPress={() => updateFormData('acceptTerms', !formData.acceptTerms)}
-        >
-          <View style={[
-            styles.checkbox,
-            formData.acceptTerms && styles.checkboxChecked,
-          ]}>
-            {formData.acceptTerms && (
-              <Ionicons name="checkmark" size={16} color={colors.text.white} />
-            )}
-          </View>
-          <Text style={styles.checkboxLabel}>
-            I accept the community guidelines and terms of service *
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.checkboxRow}
-          onPress={() => updateFormData('acceptPrivacy', !formData.acceptPrivacy)}
-        >
-          <View style={[
-            styles.checkbox,
-            formData.acceptPrivacy && styles.checkboxChecked,
-          ]}>
-            {formData.acceptPrivacy && (
-              <Ionicons name="checkmark" size={16} color={colors.text.white} />
-            )}
-          </View>
-          <Text style={styles.checkboxLabel}>
-            I accept the privacy policy *
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <Step6PrivacyConfirm
+        formData={formData}
+        updateFormData={updateFormData}
+      />
     </Animated.View>
   );
 

@@ -179,6 +179,33 @@ export default function Step1BasicInfo({
         />
       </View>
 
+      {/* Height */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>Height (cm) (optional)</Text>
+        <TextInput
+          style={[
+            styles.textInput,
+            errors.height && touched.height && styles.textInputError,
+          ]}
+          value={formData.height ? formData.height.toString() : ''}
+          onChangeText={(text: string) => {
+            // Only allow digits and limit to 3 characters
+            const numericText = text.replace(/[^0-9]/g, '');
+            if (numericText.length <= 3) {
+              updateFormData('height', numericText ? parseInt(numericText) : undefined);
+            }
+          }}
+          placeholder="e.g., 165"
+          placeholderTextColor={colors.text.tertiary}
+          keyboardType="numeric"
+          maxLength={3}
+        />
+        <FormError 
+          error={errors.height?.message} 
+          touched={touched.height} 
+        />
+      </View>
+
       {/* Location */}
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>City *</Text>
@@ -209,6 +236,26 @@ export default function Step1BasicInfo({
         <FormError 
           error={errors.location?.city?.message} 
           touched={touched.location as any} 
+        />
+      </View>
+
+      {/* Profession */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>Profession (optional)</Text>
+        <TextInput
+          style={[
+            styles.textInput,
+            errors.profession && touched.profession && styles.textInputError,
+          ]}
+          value={formData.profession || ''}
+          onChangeText={(text: string) => updateFormData('profession', text)}
+          placeholder="e.g., Software Engineer, Teacher, Doctor"
+          placeholderTextColor={colors.text.tertiary}
+          maxLength={50}
+        />
+        <FormError 
+          error={errors.profession?.message} 
+          touched={touched.profession} 
         />
       </View>
 
