@@ -20,6 +20,9 @@ import LockedFeature from '../../components/LockedFeature';
 import SocialLink from '../../components/SocialLink';
 import ProfileSection from '../../components/ProfileSection';
 import BioEditModal from '../../components/BioEditModal';
+import BasicInfoEditModal from '../../components/BasicInfoEditModal';
+import LifestyleEditModal from '../../components/LifestyleEditModal';
+import LookingForEditModal from '../../components/LookingForEditModal';
 import Toast from '../../components/Toast';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
@@ -52,6 +55,8 @@ const DEFAULT_PROFILE: UserProfile = {
   age: 25,
   birthDate: '1998-10-15', // Example birth date
   birthTime: '14:30',
+  height: 165,
+  profession: 'Software Engineer',
   birthPlace: {
     city: 'Istanbul',
     country: 'Turkey',
@@ -64,15 +69,27 @@ const DEFAULT_PROFILE: UserProfile = {
     latitude: 41.0082,
     longitude: 28.9784,
   },
-  gender: 'female',
-  seeking: ['men'],
+  gender: 'woman',
+  pronouns: 'she/her',
+  seeking: ['man', 'nonbinary'],
+  monogamy: true,
+  childrenPlan: 'Want someday',
   relationshipGoals: ['Long-term relationship'],
   bio: 'Love exploring new places and trying different cuisines! 🌍🍕',
+  prompts: {
+    'ideal-date': 'A cozy coffee shop with great conversation',
+    'life-goal': 'To travel to every continent',
+    'simple-pleasure': 'Reading a good book on a rainy day',
+  },
   photos: [
     'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg',
     'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg',
   ],
   interests: ['music', 'travel', 'cooking'],
+  smoking: 'Never',
+  drinking: 'Socially',
+  diet: 'Vegetarian',
+  exercise: 'Regularly',
   socialLinks: {
     instagram: 'sarah_insta',
     spotify: 'sarah_spotify',
@@ -85,6 +102,9 @@ export default function ProfileScreen() {
   const [isOwnProfile] = useState(true); // For now, always show own profile
   const [isEditing, setIsEditing] = useState(false);
   const [showBioModal, setShowBioModal] = useState(false);
+  const [showBasicInfoModal, setShowBasicInfoModal] = useState(false);
+  const [showLifestyleModal, setShowLifestyleModal] = useState(false);
+  const [showLookingForModal, setShowLookingForModal] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile>(DEFAULT_PROFILE);
@@ -108,6 +128,12 @@ export default function ProfileScreen() {
           console.log('📍 City:', profile.location?.city);
           console.log('👤 Age:', profile.age);
           console.log('📝 Bio:', profile.bio);
+          console.log('📏 Height:', profile.height);
+          console.log('💼 Profession:', profile.profession);
+          console.log('💬 Pronouns:', profile.pronouns);
+          console.log('❤️ Seeking:', profile.seeking);
+          console.log('🍃 Lifestyle:', { smoking: profile.smoking, drinking: profile.drinking, diet: profile.diet, exercise: profile.exercise });
+          console.log('💭 Prompts:', profile.prompts);
           setUserProfile(profile);
         } else {
           console.log('⚠️ No profile found, using default data');
@@ -210,6 +236,91 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleBasicInfoSave = async (newBasicInfo: { height?: number; profession?: string; pronouns?: string }) => {
+    if (!user?.uid) return;
+
+    try {
+      // Update local state immediately
+      setUserProfile(prev => ({ ...prev, ...newBasicInfo }));
+      setShowBasicInfoModal(false);
+      
+      // Update Firestore
+      await ProfileService.updateProfileFields(user.uid, newBasicInfo);
+      
+      showToast('Basic info updated successfully');
+    } catch (error) {
+      console.error('❌ Error updating basic info:', error);
+      showToast('Failed to update basic info', 'error');
+      
+      // Revert local state on error
+      setUserProfile(prev => ({ 
+        ...prev, 
+        height: userProfile.height,
+        profession: userProfile.profession,
+        pronouns: userProfile.pronouns,
+      }));
+    }
+  };
+
+  const handleLifestyleSave = async (newLifestyle: { smoking?: string; drinking?: string; diet?: string; exercise?: string }) => {
+    if (!user?.uid) return;
+
+    try {
+      // Update local state immediately
+      setUserProfile(prev => ({ ...prev, ...newLifestyle }));
+      setShowLifestyleModal(false);
+      
+      // Update Firestore
+      await ProfileService.updateProfileFields(user.uid, newLifestyle);
+      
+      showToast('Lifestyle updated successfully');
+    } catch (error) {
+      console.error('❌ Error updating lifestyle:', error);
+      showToast('Failed to update lifestyle', 'error');
+      
+      // Revert local state on error
+      setUserProfile(prev => ({ 
+        ...prev, 
+        smoking: userProfile.smoking,
+        drinking: userProfile.drinking,
+        diet: userProfile.diet,
+        exercise: userProfile.exercise,
+      }));
+    }
+  };
+
+  const handleLookingForSave = async (newLookingFor: { 
+    seeking?: string[]; 
+    relationshipGoals?: string[]; 
+    monogamy?: boolean; 
+    childrenPlan?: string; 
+  }) => {
+    if (!user?.uid) return;
+
+    try {
+      // Update local state immediately
+      setUserProfile(prev => ({ ...prev, ...newLookingFor }));
+      setShowLookingForModal(false);
+      
+      // Update Firestore
+      await ProfileService.updateProfileFields(user.uid, newLookingFor);
+      
+      showToast('Preferences updated successfully');
+    } catch (error) {
+      console.error('❌ Error updating preferences:', error);
+      showToast('Failed to update preferences', 'error');
+      
+      // Revert local state on error
+      setUserProfile(prev => ({ 
+        ...prev, 
+        seeking: userProfile.seeking,
+        relationshipGoals: userProfile.relationshipGoals,
+        monogamy: userProfile.monogamy,
+        childrenPlan: userProfile.childrenPlan,
+      }));
+    }
+  };
+
   const handleUpgrade = () => {
     Alert.alert('Upgrade', 'Premium upgrade flow will be implemented here');
   };
@@ -274,17 +385,42 @@ export default function ProfileScreen() {
         />
 
         {/* Basic Info */}
-        <ProfileSection title="Basic Info">
+        <ProfileSection 
+          title="Basic Info"
+          showEditButton={isOwnProfile && isEditing}
+          onEditPress={() => setShowBasicInfoModal(true)}
+        >
           <View style={styles.basicInfo}>
             <Text style={styles.name}>{userProfile.displayName}</Text>
             <Text style={styles.age}>{userProfile.age}</Text>
             <Text style={styles.gender}>{userProfile.gender}</Text>
           </View>
           
+          {userProfile.height && (
+            <View style={styles.infoRow}>
+              <Ionicons name="resize" size={16} color={colors.text.tertiary} />
+              <Text style={styles.infoText}>{userProfile.height} cm</Text>
+            </View>
+          )}
+          
+          {userProfile.profession && (
+            <View style={styles.infoRow}>
+              <Ionicons name="briefcase" size={16} color={colors.text.tertiary} />
+              <Text style={styles.infoText}>{userProfile.profession}</Text>
+            </View>
+          )}
+          
           {userProfile.location?.city && (
-            <View style={styles.locationContainer}>
+            <View style={styles.infoRow}>
               <Ionicons name="location" size={16} color={colors.text.tertiary} />
-              <Text style={styles.location}>{userProfile.location.city}</Text>
+              <Text style={styles.infoText}>{userProfile.location.city}</Text>
+            </View>
+          )}
+          
+          {userProfile.pronouns && (
+            <View style={styles.infoRow}>
+              <Ionicons name="person" size={16} color={colors.text.tertiary} />
+              <Text style={styles.infoText}>{userProfile.pronouns}</Text>
             </View>
           )}
         </ProfileSection>
@@ -306,7 +442,7 @@ export default function ProfileScreen() {
         <ProfileSection 
           title="Looking For"
           showEditButton={isOwnProfile && isEditing}
-          onEditPress={() => Alert.alert('Edit Looking For', 'This feature will be implemented soon')}
+          onEditPress={() => setShowLookingForModal(true)}
         >
           <View style={styles.lookingForContainer}>
             {userProfile.relationshipGoals?.map((goal, index) => (
@@ -316,13 +452,97 @@ export default function ProfileScreen() {
               </View>
             ))}
             {userProfile.seeking?.map((preference, index) => (
-              <View key={index} style={styles.lookingForItem}>
+              <View key={`seeking-${index}`} style={styles.lookingForItem}>
                 <Ionicons name="people" size={20} color={colors.secondary[500]} />
                 <Text style={styles.lookingForText}>Interested in {preference}</Text>
               </View>
             ))}
+            {userProfile.monogamy !== undefined && (
+              <View style={styles.lookingForItem}>
+                <Ionicons name="checkmark-circle" size={20} color={colors.accent.success} />
+                <Text style={styles.lookingForText}>
+                  {userProfile.monogamy ? 'Monogamous' : 'Open to non-monogamy'}
+                </Text>
+              </View>
+            )}
+            {userProfile.childrenPlan && (
+              <View style={styles.lookingForItem}>
+                <Ionicons name="people-circle" size={20} color={colors.secondary[500]} />
+                <Text style={styles.lookingForText}>Children: {userProfile.childrenPlan}</Text>
+              </View>
+            )}
           </View>
         </ProfileSection>
+
+        {/* Prompts Section */}
+        {userProfile.prompts && Object.keys(userProfile.prompts).some(key => userProfile.prompts?.[key]) && (
+          <ProfileSection title="Get to Know Me">
+            <View style={styles.promptsContainer}>
+              {Object.entries(userProfile.prompts).map(([promptId, answer], index) => {
+                if (!answer) return null;
+                
+                // Convert prompt ID to readable question
+                const getPromptQuestion = (id: string) => {
+                  const prompts: Record<string, string> = {
+                    'ideal-date': 'My ideal date is...',
+                    'life-goal': 'My biggest life goal is...',
+                    'simple-pleasure': 'A simple pleasure I enjoy is...',
+                    'travel-dream': 'My dream travel destination is...',
+                    'fun-fact': 'A fun fact about me is...',
+                  };
+                  return prompts[id] || 'Question';
+                };
+                
+                return (
+                  <View key={promptId} style={styles.promptItem}>
+                    <Text style={styles.promptQuestion}>{getPromptQuestion(promptId)}</Text>
+                    <Text style={styles.promptAnswer}>{answer}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </ProfileSection>
+        )}
+
+        {/* Lifestyle Section */}
+        {(userProfile.smoking || userProfile.drinking || userProfile.diet || userProfile.exercise) && (
+          <ProfileSection 
+            title="Lifestyle"
+            showEditButton={isOwnProfile && isEditing}
+            onEditPress={() => setShowLifestyleModal(true)}
+          >
+            <View style={styles.lifestyleContainer}>
+              {userProfile.smoking && (
+                <View style={styles.lifestyleItem}>
+                  <Ionicons name="fitness" size={20} color={colors.text.tertiary} />
+                  <Text style={styles.lifestyleLabel}>Smoking:</Text>
+                  <Text style={styles.lifestyleValue}>{userProfile.smoking}</Text>
+                </View>
+              )}
+              {userProfile.drinking && (
+                <View style={styles.lifestyleItem}>
+                  <Ionicons name="wine" size={20} color={colors.text.tertiary} />
+                  <Text style={styles.lifestyleLabel}>Drinking:</Text>
+                  <Text style={styles.lifestyleValue}>{userProfile.drinking}</Text>
+                </View>
+              )}
+              {userProfile.diet && (
+                <View style={styles.lifestyleItem}>
+                  <Ionicons name="restaurant" size={20} color={colors.text.tertiary} />
+                  <Text style={styles.lifestyleLabel}>Diet:</Text>
+                  <Text style={styles.lifestyleValue}>{userProfile.diet}</Text>
+                </View>
+              )}
+              {userProfile.exercise && (
+                <View style={styles.lifestyleItem}>
+                  <Ionicons name="barbell" size={20} color={colors.text.tertiary} />
+                  <Text style={styles.lifestyleLabel}>Exercise:</Text>
+                  <Text style={styles.lifestyleValue}>{userProfile.exercise}</Text>
+                </View>
+              )}
+            </View>
+          </ProfileSection>
+        )}
 
         {/* Interests */}
         <ProfileSection title="Interests">
@@ -384,6 +604,44 @@ export default function ProfileScreen() {
         bio={userProfile.bio}
         onSave={handleBioSave}
         onClose={() => setShowBioModal(false)}
+      />
+
+      {/* Basic Info Edit Modal */}
+      <BasicInfoEditModal
+        visible={showBasicInfoModal}
+        currentData={{
+          height: userProfile.height,
+          profession: userProfile.profession,
+          pronouns: userProfile.pronouns,
+        }}
+        onSave={handleBasicInfoSave}
+        onClose={() => setShowBasicInfoModal(false)}
+      />
+
+      {/* Lifestyle Edit Modal */}
+      <LifestyleEditModal
+        visible={showLifestyleModal}
+        currentData={{
+          smoking: userProfile.smoking,
+          drinking: userProfile.drinking,
+          diet: userProfile.diet,
+          exercise: userProfile.exercise,
+        }}
+        onSave={handleLifestyleSave}
+        onClose={() => setShowLifestyleModal(false)}
+      />
+
+      {/* Looking For Edit Modal */}
+      <LookingForEditModal
+        visible={showLookingForModal}
+        currentData={{
+          seeking: userProfile.seeking,
+          relationshipGoals: userProfile.relationshipGoals,
+          monogamy: userProfile.monogamy,
+          childrenPlan: userProfile.childrenPlan,
+        }}
+        onSave={handleLookingForSave}
+        onClose={() => setShowLookingForModal(false)}
       />
 
       {/* Toast Messages */}
@@ -460,12 +718,12 @@ const styles = StyleSheet.create({
     color: colors.primary[500],
     fontWeight: typography.weights.semibold,
   },
-  locationContainer: {
+  infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: spacing.xs,
   },
-  location: {
+  infoText: {
     ...typography.styles.body,
     color: colors.text.secondary,
     marginLeft: spacing.xs,
@@ -500,5 +758,46 @@ const styles = StyleSheet.create({
     ...typography.styles.body,
     color: colors.text.secondary,
     marginLeft: spacing.sm,
+  },
+  promptsContainer: {
+    paddingVertical: spacing.sm,
+  },
+  promptItem: {
+    marginBottom: spacing.md,
+    padding: spacing.sm,
+    backgroundColor: colors.background.secondary,
+    borderRadius: spacing.input.borderRadius,
+  },
+  promptQuestion: {
+    ...typography.styles.caption,
+    color: colors.text.tertiary,
+    marginBottom: spacing.xs,
+    fontWeight: typography.weights.medium,
+  },
+  promptAnswer: {
+    ...typography.styles.body,
+    color: colors.text.primary,
+    lineHeight: typography.lineHeights.relaxed,
+  },
+  lifestyleContainer: {
+    paddingVertical: spacing.sm,
+  },
+  lifestyleItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  lifestyleLabel: {
+    ...typography.styles.body,
+    color: colors.text.secondary,
+    marginLeft: spacing.sm,
+    minWidth: 80,
+    fontWeight: typography.weights.medium,
+  },
+  lifestyleValue: {
+    ...typography.styles.body,
+    color: colors.text.primary,
+    flex: 1,
   },
 });
