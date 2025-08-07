@@ -20,14 +20,11 @@ const CHILDREN_PLAN_OPTIONS = [
   { label: 'Already have them', value: 'already-have' },
 ];
 
+import { RelationshipGoals } from '../../types/profile';
+
 interface Step2RelationshipGoalsProps {
-  formData: {
-    relationshipType: string;
-    monogamy: boolean;
-    childrenPlan: string;
-    childrenPlanDetails?: string;
-  };
-  updateFormData: (field: any, value: any) => void;
+  formData: RelationshipGoals;
+  updateFormData: (field: keyof RelationshipGoals, value: any) => void;
 }
 
 export default function Step2RelationshipGoals({

@@ -1,5 +1,6 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useCallback, useRef } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -39,41 +40,21 @@ const PRONOUN_OPTIONS = [
   { label: 'Custom', value: 'custom' },
 ];
 
-// Sexual orientation options
-const ORIENTATION_OPTIONS = [
-  { label: 'Heterosexual', value: 'heterosexual' },
-  { label: 'Homosexual', value: 'homosexual' },
-  { label: 'Bisexual', value: 'bisexual' },
-  { label: 'Pansexual', value: 'pansexual' },
-  { label: 'Asexual', value: 'asexual' },
-  { label: 'Demisexual', value: 'demisexual' },
-  { label: 'Grey-asexual', value: 'grey-asexual' },
-  { label: 'Polysexual', value: 'polysexual' },
-  { label: 'Omnisexual', value: 'omnisexual' },
-  { label: 'Sapiosexual', value: 'sapiosexual' },
-  { label: 'Custom', value: 'custom' },
+// Seeking options
+const SEEKING_OPTIONS = [
+  { label: 'Men', value: 'men', icon: 'male' },
+  { label: 'Women', value: 'women', icon: 'female' },
+  { label: 'Non-binary', value: 'non-binary', icon: 'person' },
+  { label: 'Everyone', value: 'everyone', icon: 'people' },
+  { label: 'Custom', value: 'custom', icon: 'heart' },
 ];
 
+import { BasicInfo } from '../../types/profile';
+
 interface Step1BasicInfoProps {
-  formData: {
-    displayName: string;
-    birthDate: string;
-    birthTime: string;
-    location: {
-      city: string;
-      country: string;
-      latitude: number;
-      longitude: number;
-    };
-    gender: string;
-    customGender?: string;
-    pronouns: string;
-    customPronouns?: string;
-    sexualOrientation: string[];
-    customOrientation?: string;
-  };
-  updateFormData: (field: any, value: any) => void;
-  updateNestedField: (parentField: any, childField: string, value: any) => void;
+  formData: BasicInfo;
+  updateFormData: (field: keyof BasicInfo, value: any) => void;
+  updateNestedField: (parentField: keyof BasicInfo, childField: string, value: any) => void;
   errors?: any;
   touched?: Record<string, boolean>;
 }
@@ -87,6 +68,7 @@ export default function Step1BasicInfo({
 }: Step1BasicInfoProps) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showCityPicker, setShowCityPicker] = useState(false);
+  const nameInputRef = useRef<TextInput>(null);
 
   const handleDateConfirm = useCallback((date: Date) => {
     updateFormData('birthDate', date.toISOString().split('T')[0]);
@@ -95,14 +77,67 @@ export default function Step1BasicInfo({
   const handleCityConfirm = useCallback((city: string) => {
     updateNestedField('location', 'city', city);
   }, [updateNestedField]);
+
+  const getCurrentLocation = async () => {
+    try {
+      // Request location permissions
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Location Permission',
+          'Please grant location permission to use your current location.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      // Get current location
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
+      // Reverse geocode to get city name
+      const reverseGeocode = await Location.reverseGeocodeAsync({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+
+      if (reverseGeocode.length > 0) {
+        const address = reverseGeocode[0];
+        const cityName = address.city || address.subregion || address.region || 'Unknown City';
+        
+        // Update location data
+        updateNestedField('location', 'city', cityName);
+        updateNestedField('location', 'latitude', location.coords.latitude);
+        updateNestedField('location', 'longitude', location.coords.longitude);
+        
+        Alert.alert('Success', `Location set to ${cityName}`);
+      } else {
+        Alert.alert('Error', 'Could not determine your city. Please select manually.');
+      }
+    } catch (error) {
+      console.error('Location error:', error);
+      Alert.alert('Error', 'Failed to get your current location. Please select manually.');
+    }
+  };
   return (
-    <View style={styles.container}>
-      <Text style={styles.sectionTitle}>Personal Information</Text>
+    <KeyboardAvoidingView 
+      style={styles.flex}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+    >
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.sectionTitle}>Personal Information</Text>
       
       {/* Display Name */}
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Full Name *</Text>
         <TextInput
+          ref={nameInputRef}
           style={[
             styles.textInput,
             errors.displayName && touched.displayName && styles.textInputError,
@@ -111,6 +146,11 @@ export default function Step1BasicInfo({
           onChangeText={useCallback((text: string) => updateFormData('displayName', text), [updateFormData])}
           placeholder="Enter your full name"
           placeholderTextColor={colors.text.tertiary}
+          returnKeyType="next"
+          blurOnSubmit={false}
+          onSubmitEditing={() => {
+            nameInputRef.current?.blur();
+          }}
         />
         <FormError 
           error={errors.displayName?.message} 
@@ -154,6 +194,18 @@ export default function Step1BasicInfo({
           </Text>
           <Ionicons name="location-outline" size={20} color={colors.primary[500]} />
         </TouchableOpacity>
+        
+        {/* Current Location Button */}
+        <TouchableOpacity 
+          style={styles.currentLocationButton}
+          onPress={getCurrentLocation}
+          accessibilityLabel="Use current location"
+          accessibilityRole="button"
+        >
+          <Ionicons name="navigate" size={16} color={colors.primary[500]} />
+          <Text style={styles.currentLocationText}>Use Current Location</Text>
+        </TouchableOpacity>
+        
         <FormError 
           error={errors.location?.city?.message} 
           touched={touched.location as any} 
@@ -182,13 +234,13 @@ export default function Step1BasicInfo({
         />
       </View>
 
-      {/* Sexual Orientation */}
+      {/* Seeking */}
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Sexual Orientation</Text>
+        <Text style={styles.inputLabel}>Looking for *</Text>
         <OptionGrid
-          options={ORIENTATION_OPTIONS}
-          selectedValues={formData.sexualOrientation}
-          onSelectionChange={(value) => updateFormData('sexualOrientation', value)}
+          options={SEEKING_OPTIONS}
+          selectedValues={formData.seeking}
+          onSelectionChange={(value) => updateFormData('seeking', value)}
           multiSelect={true}
         />
       </View>
@@ -208,13 +260,18 @@ export default function Step1BasicInfo({
         onConfirm={handleCityConfirm}
         currentCity={formData.location.city}
         title="Select City"
-      />
-    </View>
+              />
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
   container: {
+    flexGrow: 1,
     paddingHorizontal: spacing.md,
   },
   sectionTitle: {
@@ -257,5 +314,23 @@ const styles = StyleSheet.create({
   dateButtonText: {
     ...typography.styles.input,
     color: colors.text.primary,
+  },
+  currentLocationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.sm,
+    borderRadius: spacing.button.borderRadius,
+    backgroundColor: colors.background.tertiary,
+    borderWidth: 1,
+    borderColor: colors.border.secondary,
+    gap: spacing.xs,
+  },
+  currentLocationText: {
+    ...typography.styles.body,
+    color: colors.primary[500],
+    fontWeight: typography.weights.medium,
   },
 });

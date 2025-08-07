@@ -75,4 +75,113 @@ export interface ToastMessage {
   type: 'success' | 'error' | 'info';
   message: string;
   duration?: number;
+}
+
+// Step-specific types for better type safety
+export interface BasicInfo {
+  displayName: string;
+  birthDate: string;
+  birthTime: string;
+  location: {
+    city: string;
+    country: string;
+    latitude: number;
+    longitude: number;
+  };
+  gender: string;
+  customGender?: string;
+  pronouns: string;
+  customPronouns?: string;
+  seeking: string[];
+  customSeeking?: string;
+}
+
+export interface RelationshipGoals {
+  relationshipType: string;
+  monogamy: boolean;
+  childrenPlan: string;
+  childrenPlanDetails?: string;
+}
+
+export interface AboutPrompts {
+  bio: string;
+  prompts: Record<PromptOption['id'], string>;
+}
+
+export interface InterestsLifestyle {
+  interests: string[];
+  customInterests: string[];
+  smoking: string;
+  drinking: string;
+  diet: string;
+  exercise: string;
+}
+
+export interface PhotoUpload {
+  photos: string[];
+  profilePhotoUrl: string;
+}
+
+export interface PrivacyConfirm {
+  showOrientation: boolean;
+  showGender: boolean;
+  incognitoMode: boolean;
+  acceptTerms: boolean;
+  acceptPrivacy: boolean;
+}
+
+// Prompt option type
+export interface PromptOption {
+  id: 'ideal-date' | 'life-goal' | 'simple-pleasure' | 'travel-dream' | 'fun-fact';
+  question: string;
+  icon: string;
+}
+
+// Complete form data type
+export interface CreateProfileFormData {
+  // Step 1: Basic Info
+  displayName: string;
+  birthDate: string;
+  birthTime: string;
+  location: {
+    city: string;
+    country: string;
+    latitude: number;
+    longitude: number;
+  };
+  gender: string;
+  customGender?: string;
+  pronouns: string;
+  customPronouns?: string;
+  seeking: string[];
+  customSeeking?: string;
+
+  // Step 2: Relationship Goals
+  relationshipType: string;
+  monogamy: boolean;
+  childrenPlan: string;
+  childrenPlanDetails?: string;
+
+  // Step 3: About & Prompts
+  bio: string;
+  prompts: Record<PromptOption['id'], string>;
+
+  // Step 4: Interests & Lifestyle
+  interests: string[];
+  customInterests: string[];
+  smoking: string;
+  drinking: string;
+  diet: string;
+  exercise: string;
+
+  // Step 5: Photos
+  photos: string[];
+  profilePhotoUrl: string;
+
+  // Step 6: Privacy
+  showOrientation: boolean;
+  showGender: boolean;
+  incognitoMode: boolean;
+  acceptTerms: boolean;
+  acceptPrivacy: boolean;
 } 

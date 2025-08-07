@@ -5,15 +5,11 @@ import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacings';
 
+import { PrivacyConfirm } from '../../types/profile';
+
 interface Step6PrivacyConfirmProps {
-  formData: {
-    showOrientation: boolean;
-    showGender: boolean;
-    incognitoMode: boolean;
-    acceptTerms: boolean;
-    acceptPrivacy: boolean;
-  };
-  updateFormData: (field: any, value: any) => void;
+  formData: PrivacyConfirm;
+  updateFormData: (field: keyof PrivacyConfirm, value: any) => void;
 }
 
 export default function Step6PrivacyConfirm({
@@ -34,6 +30,9 @@ export default function Step6PrivacyConfirm({
               formData.showOrientation && styles.toggleSwitchActive,
             ]}
             onPress={useCallback(() => updateFormData('showOrientation', !formData.showOrientation), [updateFormData, formData.showOrientation])}
+            accessibilityLabel="Show sexual orientation toggle"
+            accessibilityRole="switch"
+            accessibilityState={{ checked: formData.showOrientation }}
           >
             <View style={[
               styles.toggleThumb,
@@ -50,6 +49,9 @@ export default function Step6PrivacyConfirm({
               formData.showGender && styles.toggleSwitchActive,
             ]}
             onPress={useCallback(() => updateFormData('showGender', !formData.showGender), [updateFormData, formData.showGender])}
+            accessibilityLabel="Show gender toggle"
+            accessibilityRole="switch"
+            accessibilityState={{ checked: formData.showGender }}
           >
             <View style={[
               styles.toggleThumb,
@@ -66,6 +68,9 @@ export default function Step6PrivacyConfirm({
               formData.incognitoMode && styles.toggleSwitchActive,
             ]}
             onPress={useCallback(() => updateFormData('incognitoMode', !formData.incognitoMode), [updateFormData, formData.incognitoMode])}
+            accessibilityLabel="Incognito mode toggle"
+            accessibilityRole="switch"
+            accessibilityState={{ checked: formData.incognitoMode }}
           >
             <View style={[
               styles.toggleThumb,
@@ -82,6 +87,9 @@ export default function Step6PrivacyConfirm({
         <TouchableOpacity
           style={styles.checkboxRow}
           onPress={useCallback(() => updateFormData('acceptTerms', !formData.acceptTerms), [updateFormData, formData.acceptTerms])}
+          accessibilityLabel="Accept terms and conditions checkbox"
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: formData.acceptTerms }}
         >
           <View style={[
             styles.checkbox,
@@ -99,6 +107,9 @@ export default function Step6PrivacyConfirm({
         <TouchableOpacity
           style={styles.checkboxRow}
           onPress={useCallback(() => updateFormData('acceptPrivacy', !formData.acceptPrivacy), [updateFormData, formData.acceptPrivacy])}
+          accessibilityLabel="Accept privacy policy checkbox"
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: formData.acceptPrivacy }}
         >
           <View style={[
             styles.checkbox,

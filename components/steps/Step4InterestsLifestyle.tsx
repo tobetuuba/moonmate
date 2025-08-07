@@ -53,16 +53,11 @@ const EXERCISE_OPTIONS = [
   { label: 'Daily', value: 'daily' },
 ];
 
+import { InterestsLifestyle } from '../../types/profile';
+
 interface Step4InterestsLifestyleProps {
-  formData: {
-    interests: string[];
-    customInterests: string[];
-    smoking: string;
-    drinking: string;
-    diet: string;
-    exercise: string;
-  };
-  updateFormData: (field: any, value: any) => void;
+  formData: InterestsLifestyle;
+  updateFormData: (field: keyof InterestsLifestyle, value: any) => void;
 }
 
 export default function Step4InterestsLifestyle({

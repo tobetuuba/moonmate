@@ -616,6 +616,9 @@ export default function CreateProfileNewScreen() {
           enableOnAndroid={true}
           enableAutomaticScroll={true}
           keyboardShouldPersistTaps="handled"
+          extraScrollHeight={150}
+          keyboardDismissMode="interactive"
+          keyboardOpeningTime={0}
         >
           {renderCurrentStep()}
         </KeyboardAwareScrollView>

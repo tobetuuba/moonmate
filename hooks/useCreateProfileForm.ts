@@ -4,59 +4,11 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { router } from 'expo-router';
 import { ProfileService } from '../services/api/ProfileService';
-import { UserProfile } from '../types/profile';
+import { UserProfile, CreateProfileFormData, PromptOption } from '../types/profile';
 import { auth } from '../services/firebase';
 import { completeFormSchema, validateStep } from '../utils/validationSchemas';
 
-interface FormData {
-  // Step 1: Basic Info
-  displayName: string;
-  birthDate: string;
-  birthTime: string;
-  location: {
-    city: string;
-    country: string;
-    latitude: number;
-    longitude: number;
-  };
-  gender: string;
-  customGender?: string;
-  pronouns: string;
-  customPronouns?: string;
-  sexualOrientation: string[];
-  customOrientation?: string;
-
-  // Step 2: Relationship Goals
-  relationshipType: string;
-  monogamy: boolean;
-  childrenPlan: string;
-  childrenPlanDetails?: string;
-
-  // Step 3: About & Prompts
-  bio: string;
-  prompts: {
-    [key: string]: string;
-  };
-
-  // Step 4: Interests & Lifestyle
-  interests: string[];
-  customInterests: string[];
-  smoking: string;
-  drinking: string;
-  diet: string;
-  exercise: string;
-
-  // Step 5: Photos
-  photos: string[];
-  profilePhotoUrl: string;
-
-  // Step 6: Privacy
-  showOrientation: boolean;
-  showGender: boolean;
-  incognitoMode: boolean;
-  acceptTerms: boolean;
-  acceptPrivacy: boolean;
-}
+type FormData = CreateProfileFormData;
 
 const INITIAL_FORM_DATA: FormData = {
   displayName: '',
@@ -72,8 +24,8 @@ const INITIAL_FORM_DATA: FormData = {
   customGender: '',
   pronouns: '',
   customPronouns: '',
-  sexualOrientation: [],
-  customOrientation: '',
+  seeking: [],
+  customSeeking: '',
 
   relationshipType: '',
   monogamy: true,
@@ -81,7 +33,13 @@ const INITIAL_FORM_DATA: FormData = {
   childrenPlanDetails: '',
 
   bio: '',
-  prompts: {},
+  prompts: {
+    'ideal-date': '',
+    'life-goal': '',
+    'simple-pleasure': '',
+    'travel-dream': '',
+    'fun-fact': '',
+  },
 
   interests: [],
   customInterests: [],
@@ -196,9 +154,38 @@ export function useCreateProfileForm() {
       Alert.alert('Success!', 'Your profile has been created successfully!', [
         { text: 'OK', onPress: () => router.replace('/(tabs)') }
       ]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Profile creation error:', error);
-      Alert.alert('Error', 'An error occurred while creating your profile. Please try again.');
+      
+      let errorMessage = 'An error occurred while creating your profile.';
+      let retryAction = 'Please try again.';
+      
+      // Handle specific error types
+      if (error.code === 'auth/network-request-failed') {
+        errorMessage = 'Network connection failed.';
+        retryAction = 'Please check your internet connection and try again.';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many requests.';
+        retryAction = 'Please wait a moment and try again.';
+      } else if (error.code === 'permission-denied') {
+        errorMessage = 'Permission denied.';
+        retryAction = 'Please check your account permissions.';
+      } else if (error.message?.includes('timeout')) {
+        errorMessage = 'Request timed out.';
+        retryAction = 'Please try again.';
+      } else if (error.message?.includes('photo')) {
+        errorMessage = 'Photo upload failed.';
+        retryAction = 'Please try uploading photos again.';
+      }
+      
+      Alert.alert(
+        'Error', 
+        `${errorMessage} ${retryAction}`, 
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Retry', onPress: () => onSubmit(data) }
+        ]
+      );
     } finally {
       setIsSubmitting(false);
     }

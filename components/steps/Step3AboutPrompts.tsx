@@ -1,13 +1,15 @@
-import React, { useCallback } from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
+import React, { useCallback, useRef } from 'react';
+import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacings';
 import FormError from '../FormError';
 
+import { PromptOption } from '../../types/profile';
+
 // Prompt options
-const PROMPT_OPTIONS = [
+const PROMPT_OPTIONS: PromptOption[] = [
   {
     id: 'ideal-date',
     question: 'What would your ideal first date be like?',
@@ -35,14 +37,11 @@ const PROMPT_OPTIONS = [
   },
 ];
 
+import { AboutPrompts } from '../../types/profile';
+
 interface Step3AboutPromptsProps {
-  formData: {
-    bio: string;
-    prompts: {
-      [key: string]: string;
-    };
-  };
-  updateFormData: (field: any, value: any) => void;
+  formData: AboutPrompts;
+  updateFormData: (field: keyof AboutPrompts, value: any) => void;
   errors?: any;
   touched?: Record<string, boolean>;
 }
@@ -53,14 +52,26 @@ export default function Step3AboutPrompts({
   errors = {},
   touched = {},
 }: Step3AboutPromptsProps) {
+  const bioInputRef = useRef<TextInput>(null);
+  
   return (
-    <View style={styles.container}>
-      <Text style={styles.sectionTitle}>About You</Text>
+    <KeyboardAvoidingView 
+      style={styles.flex}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+    >
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.sectionTitle}>About You</Text>
 
       {/* Bio */}
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Tell us about yourself *</Text>
         <TextInput
+          ref={bioInputRef}
           style={[
             styles.textInput, 
             styles.textArea,
@@ -73,6 +84,11 @@ export default function Step3AboutPrompts({
           numberOfLines={4}
           maxLength={500}
           placeholderTextColor={colors.text.tertiary}
+          returnKeyType="next"
+          blurOnSubmit={false}
+          onSubmitEditing={() => {
+            bioInputRef.current?.blur();
+          }}
         />
         <Text style={styles.charCount}>{formData.bio.length}/500</Text>
         <FormError 
@@ -114,12 +130,17 @@ export default function Step3AboutPrompts({
           </Text>
         </View>
       ))}
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
   container: {
+    flexGrow: 1,
     paddingHorizontal: spacing.md,
   },
   sectionTitle: {

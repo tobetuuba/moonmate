@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
 import { typography } from '../theme/typography';
 import { spacing } from '../theme/spacings';
 
@@ -26,6 +26,7 @@ export default function OptionGrid({
   multiSelect = false,
   maxSelections,
 }: OptionGridProps) {
+  const { colors } = useTheme();
   const isSelected = (value: string) => {
     if (multiSelect) {
       return Array.isArray(selectedValues) && selectedValues.includes(value);
@@ -47,6 +48,8 @@ export default function OptionGrid({
     }
   };
 
+  const styles = createStyles(colors);
+  
   return (
     <View style={styles.container}>
       {options.map((option) => (
@@ -57,6 +60,9 @@ export default function OptionGrid({
             isSelected(option.value) && styles.optionChipSelected,
           ]}
           onPress={() => handleOptionPress(option.value)}
+          accessibilityLabel={`${option.label} option`}
+          accessibilityRole="button"
+          accessibilityState={{ selected: isSelected(option.value) }}
         >
           {option.icon && (
             <Ionicons
@@ -78,7 +84,7 @@ export default function OptionGrid({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     flexWrap: 'wrap',
