@@ -7,11 +7,13 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { PanGestureHandler, State, GestureHandlerRootView } from 'react-native-gesture-handler';
+import SwipeCard from '../components/SwipeCard';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -29,7 +31,19 @@ interface User {
   photos: string[];
   location?: {
     city?: string;
+    country?: string;
   };
+  profession?: string;
+  pronouns?: string;
+  bio?: string;
+  interests?: string[];
+  smoking?: string;
+  drinking?: string;
+  exercise?: string;
+  relationshipGoals?: string[];
+  childrenPlan?: string;
+  monogamy?: string;
+  prompts?: Record<string, string>;
 }
 
 interface VisualMatchScreenProps {
@@ -53,6 +67,41 @@ export default function VisualMatchScreen({
   const translateY = useSharedValue(0);
   const scale = useSharedValue(1);
   const rotate = useSharedValue(0);
+
+  // Animated styles for swipe labels
+  const likeLabelStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      translateX.value,
+      [0, width * 0.2],
+      [0, 1],
+      Extrapolate.CLAMP
+    ),
+    transform: [{
+      rotate: `${interpolate(
+        translateX.value,
+        [0, width * 0.2],
+        [0, 15],
+        Extrapolate.CLAMP
+      )}deg`
+    }]
+  }));
+
+  const passLabelStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      translateX.value,
+      [-width * 0.2, 0],
+      [1, 0],
+      Extrapolate.CLAMP
+    ),
+    transform: [{
+      rotate: `${interpolate(
+        translateX.value,
+        [-width * 0.2, 0],
+        [-15, 0],
+        Extrapolate.CLAMP
+      )}deg`
+    }]
+  }));
 
   // Reset animated values when currentIndex changes
   React.useEffect(() => {
@@ -92,6 +141,18 @@ export default function VisualMatchScreen({
     translateY.value = 0;
     rotate.value = 0;
     scale.value = 1;
+  };
+
+  const handleProgrammaticSwipe = (direction: 'left' | 'right') => {
+    const targetX = direction === 'right' ? width * 1.5 : -width * 1.5;
+    
+    translateX.value = withSpring(targetX, {
+      damping: 12,
+      stiffness: 80,
+      mass: 1.2,
+    });
+    
+    handleSwipeComplete(direction);
   };
 
   const gestureHandler = useAnimatedGestureHandler({
@@ -181,57 +242,45 @@ export default function VisualMatchScreen({
 
   const renderCard = (user: User, index: number) => {
     const age = calculateAge(user.birthDate);
-    const profilePhoto = user.photos && user.photos.length > 0 ? user.photos[0] : null;
-
+    
+    // Transform user data to match SwipeCard interface
+    const swipeCardUser = {
+      id: user.id,
+      displayName: user.displayName,
+      age: age,
+      profession: user.profession,
+      location: user.location,
+      pronouns: user.pronouns,
+      bio: user.bio,
+      interests: user.interests,
+      lifestyle: {
+        smoking: user.smoking,
+        drinking: user.drinking,
+        exercise: user.exercise,
+      },
+      relationshipGoals: user.relationshipGoals,
+      childrenPlan: user.childrenPlan,
+      monogamy: user.monogamy,
+      prompts: user.prompts,
+      photos: user.photos,
+    };
+    
     return (
-      <View style={styles.card}>
-        {profilePhoto ? (
-          <Image 
-            source={{ uri: profilePhoto }} 
-            style={styles.fullCardImage}
-            resizeMode="cover"
-            onError={() => {
-              console.log('Image failed to load:', profilePhoto);
-            }}
-            onLoad={() => {
-              console.log('Image loaded successfully:', profilePhoto);
-            }}
-          />
-        ) : (
-          <LinearGradient
-            colors={['#FF6B9D', '#C44569', '#8B5FBF']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.cardGradient}
-          >
-            <View style={styles.photoPlaceholder}>
-              <Ionicons name="person" size={80} color="#fff" />
-            </View>
-          </LinearGradient>
-        )}
-        
-        {/* User info overlay */}
-        <View style={styles.userInfoOverlay}>
-          <Text style={styles.displayName}>
-            {user.displayName}, {age}
-          </Text>
-          {user.location?.city && (
-            <View style={styles.locationContainer}>
-              <Ionicons name="location" size={16} color="#fff" />
-              <Text style={styles.locationText}>{user.location.city}</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Swipe feedback labels */}
-        <Animated.View style={[styles.swipeLabel, styles.likeLabel, { opacity: translateX.value > 30 ? 1 : 0 }]}>
-          <Text style={styles.swipeLabelText}>❤️ LIKE</Text>
-        </Animated.View>
-        
-        <Animated.View style={[styles.swipeLabel, styles.passLabel, { opacity: translateX.value < -30 ? 1 : 0 }]}>
-          <Text style={styles.swipeLabelText}>❌ PASS</Text>
-        </Animated.View>
-      </View>
+      <Animated.View
+        key={user.id}
+        style={[
+          styles.card,
+          cardStyle,
+        ]}
+      >
+        <SwipeCard
+          user={swipeCardUser}
+          onInfoPress={() => console.log('Info pressed for', user.displayName)}
+          onPassPress={() => handleProgrammaticSwipe('left')}
+          onLikePress={() => handleProgrammaticSwipe('right')}
+          swipeProgress={translateX}
+        />
+      </Animated.View>
     );
   };
 
@@ -306,6 +355,33 @@ export default function VisualMatchScreen({
         <Text style={styles.footerText}>
           {currentIndex + 1} of {users.length} profiles
         </Text>
+        
+        {/* Action Button Bar */}
+        <View style={styles.actionButtonBar}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.passButton]}
+            onPress={() => handleProgrammaticSwipe('left')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="close" size={28} color="#ff4444" />
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.actionButton, styles.infoButton]}
+            onPress={() => console.log('Info pressed')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="information-circle" size={28} color="#666" />
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.actionButton, styles.likeButton]}
+            onPress={() => handleProgrammaticSwipe('right')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="heart" size={28} color="#4CAF50" />
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -423,11 +499,44 @@ const styles = StyleSheet.create({
   footer: {
     alignItems: 'center',
     paddingVertical: 20,
+    paddingBottom: 30,
   },
   footerText: {
     fontSize: 16,
     color: '#666',
     fontWeight: '500',
+    marginBottom: 20,
+  },
+  actionButtonBar: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 30,
+  },
+  actionButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  passButton: {
+    borderWidth: 2,
+    borderColor: '#ff4444',
+  },
+  infoButton: {
+    borderWidth: 2,
+    borderColor: '#ddd',
+  },
+  likeButton: {
+    borderWidth: 2,
+    borderColor: '#4CAF50',
   },
   loadingContainer: {
     flex: 1,
@@ -493,11 +602,13 @@ const styles = StyleSheet.create({
   },
   likeLabel: {
     right: 20,
-    backgroundColor: '#4CAF50',
+    backgroundColor: 'rgba(76, 175, 80, 0.15)',
+    borderColor: 'rgba(76, 175, 80, 0.6)',
   },
   passLabel: {
     left: 20,
-    backgroundColor: '#ff4444',
+    backgroundColor: 'rgba(255, 68, 68, 0.15)',
+    borderColor: 'rgba(255, 68, 68, 0.6)',
   },
   swipeLabelText: {
     color: '#fff',
