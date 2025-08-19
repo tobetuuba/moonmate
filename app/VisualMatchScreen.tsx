@@ -382,28 +382,33 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: 4, // even less
     paddingHorizontal: 20,
+    marginBottom: 0,
+    paddingBottom: 0,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 18, // reduced from 28
     fontWeight: 'bold',
     color: '#1a1a1a',
-    marginBottom: 8,
+    marginBottom: 2, // less space below
   },
   headerSubtitle: {
-    fontSize: 16,
+    fontSize: 13, // reduced from 16
     color: '#666',
     textAlign: 'center',
+    marginBottom: 0,
   },
   swiperContainer: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     padding: 0,
     margin: 0,
     width: '100%',
     height: '100%',
+    paddingHorizontal: 16, // add side padding
+    paddingBottom: 16, // add bottom padding to match sides
   },
   cardStack: {
     position: 'relative',

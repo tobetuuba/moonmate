@@ -14,11 +14,13 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { PinchGestureHandler, PinchGestureHandlerGestureEvent } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   interpolate,
   Extrapolate,
+  useAnimatedGestureHandler,
 } from 'react-native-reanimated';
 
 const { width, height } = Dimensions.get('window');
@@ -54,6 +56,77 @@ interface SwipeCardProps {
   onPassPress?: () => void;
   onLikePress?: () => void;
   swipeProgress?: import('react-native-reanimated').SharedValue<number>;
+}
+
+// Helper to render a zoomable photo
+function ZoomablePhoto({ uri }: { uri: string }) {
+  const pinchScale = useSharedValue(1);
+  const focalX = useSharedValue(0);
+  const focalY = useSharedValue(0);
+  const containerWidth = width;
+  const containerHeight = height * 0.7;
+  const pinchHandler = useAnimatedGestureHandler<PinchGestureHandlerGestureEvent>({
+    onActive: (event) => {
+      pinchScale.value = event.scale;
+      focalX.value = event.focalX;
+      focalY.value = event.focalY;
+    },
+    onEnd: () => {
+      pinchScale.value = 1;
+      focalX.value = 0;
+      focalY.value = 0;
+    },
+  });
+  const animatedPhotoStyle = useAnimatedStyle(() => {
+    const scale = pinchScale.value;
+    const scaledWidth = containerWidth * scale;
+    const scaledHeight = containerHeight * scale;
+    // Center of the container
+    const centerX = containerWidth / 2;
+    const centerY = containerHeight / 2;
+    // Focal point relative to center
+    const dx = focalX.value - centerX;
+    const dy = focalY.value - centerY;
+    // Raw translation: move the image so the focal point stays under the fingers
+    let translateX = -dx * (scale - 1);
+    let translateY = -dy * (scale - 1);
+    // Clamp logic for X
+    if (scaledWidth <= containerWidth) {
+      translateX = (containerWidth - scaledWidth) / 2;
+    } else {
+      const minTranslateX = containerWidth - scaledWidth;
+      const maxTranslateX = 0;
+      translateX = Math.max(minTranslateX, Math.min(maxTranslateX, translateX));
+    }
+    // Clamp logic for Y
+    if (scaledHeight <= containerHeight) {
+      translateY = (containerHeight - scaledHeight) / 2;
+    } else {
+      const minTranslateY = containerHeight - scaledHeight;
+      const maxTranslateY = 0;
+      translateY = Math.max(minTranslateY, Math.min(maxTranslateY, translateY));
+    }
+    return {
+      transform: [
+        { translateX },
+        { translateY },
+        { scale },
+      ],
+    };
+  });
+  return (
+    <View style={styles.photoContainer}>
+      <PinchGestureHandler onGestureEvent={pinchHandler}>
+        <Animated.View style={{ flex: 1 }}>
+          <Animated.Image
+            source={{ uri }}
+            style={[styles.photo, animatedPhotoStyle]}
+            resizeMode="cover"
+          />
+        </Animated.View>
+      </PinchGestureHandler>
+    </View>
+  );
 }
 
 export default function SwipeCard({ 
@@ -113,6 +186,19 @@ export default function SwipeCard({
         Extrapolate.CLAMP
       )}deg` : '0deg'
     }]
+  }));
+
+  const pinchScale = useSharedValue(1);
+  const pinchHandler = useAnimatedGestureHandler<PinchGestureHandlerGestureEvent>({
+    onActive: ({ scale }) => {
+      pinchScale.value = scale;
+    },
+    onEnd: () => {
+      pinchScale.value = 1;
+    },
+  });
+  const animatedPhotoStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pinchScale.value }],
   }));
 
   const getInterestIcon = (interest: string) => {
@@ -193,25 +279,7 @@ export default function SwipeCard({
 
   return (
     <View style={styles.container}>
-      {/* Fotoğraf üstte, detaylar aşağıda scrollable */}
-      <View style={styles.photoContainer}>
-        {mainPhoto ? (
-          <Image
-            source={{ uri: mainPhoto }}
-            style={styles.photo}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-          />
-        ) : (
-          <LinearGradient colors={fallbackGradient} style={styles.photo}>
-            <View style={styles.placeholderContent}>
-              <Ionicons name="person" size={80} color="#fff" />
-              <Text style={styles.placeholderText}>No photo available</Text>
-            </View>
-          </LinearGradient>
-        )}
-      </View>
-      {/* Floating Undo and Super Like buttons at top corners */}
+      {/* Floating Undo and Super Like buttons at top corners (over photo) */}
       <TouchableOpacity style={styles.floatingUndo} onPress={onUndoPress} activeOpacity={0.7}>
         <Ionicons name="arrow-undo" size={22} color="#fff" />
       </TouchableOpacity>
@@ -222,7 +290,6 @@ export default function SwipeCard({
       {showSuperLikeAnim && (
         <View style={styles.superLikeOverlay} pointerEvents="none">
           <Text style={styles.superLikeText}>Super Like!</Text>
-          {/* Flying stars */}
           {starAnims.map((anim, i) => {
             const angle = (i / starAnims.length) * Math.PI * 2;
             const radius = 120;
@@ -257,7 +324,21 @@ export default function SwipeCard({
           })}
         </View>
       )}
+      {/* Unified ScrollView: photo and all details scroll together */}
       <ScrollView style={styles.detailsScroll} contentContainerStyle={{ paddingBottom: 24 }}>
+        {/* Profile Photo at the top of the scrollable area with pinch-to-zoom */}
+        {user.photos && user.photos[0] ? (
+          <ZoomablePhoto uri={user.photos[0]} />
+        ) : (
+          <View style={styles.photoContainer}>
+            <LinearGradient colors={fallbackGradient} style={styles.photo}>
+              <View style={styles.placeholderContent}>
+                <Ionicons name="person" size={80} color="#fff" />
+                <Text style={styles.placeholderText}>No photo available</Text>
+              </View>
+            </LinearGradient>
+          </View>
+        )}
         {/* Basic Info Section (before About) */}
         <View style={styles.basicInfoSection}>
           <View style={styles.basicInfoRow}>
@@ -273,6 +354,8 @@ export default function SwipeCard({
           )}
           {user.pronouns && <Text style={styles.basicInfoPronouns}>{user.pronouns}</Text>}
         </View>
+        {/* 2nd photo */}
+        {user.photos && user.photos[1] && <ZoomablePhoto uri={user.photos[1]} />}
         {/* About Section */}
         {(user.bio || user.prompts) && (
           <View style={styles.section}>
@@ -280,6 +363,8 @@ export default function SwipeCard({
             <Text style={styles.bioText}>{user.bio || user.prompts?.['simple-pleasure'] || 'Looking for meaningful connections'}</Text>
           </View>
         )}
+        {/* 3rd photo */}
+        {user.photos && user.photos[2] && <ZoomablePhoto uri={user.photos[2]} />}
         {/* Looking for (moved up) */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Looking for</Text>
@@ -304,6 +389,8 @@ export default function SwipeCard({
             )}
           </View>
         </View>
+        {/* 4th photo */}
+        {user.photos && user.photos[3] && <ZoomablePhoto uri={user.photos[3]} />}
         {/* Interests */}
         {user.interests && user.interests.length > 0 && (
           <View style={styles.section}>
@@ -318,6 +405,8 @@ export default function SwipeCard({
             </View>
           </View>
         )}
+        {/* 5th photo */}
+        {user.photos && user.photos[4] && <ZoomablePhoto uri={user.photos[4]} />}
         {/* Lifestyle */}
         {user.lifestyle && (
           <View style={styles.section}>
@@ -344,6 +433,8 @@ export default function SwipeCard({
             </View>
           </View>
         )}
+        {/* 6th photo */}
+        {user.photos && user.photos[5] && <ZoomablePhoto uri={user.photos[5]} />}
         {/* Fun Fact/Prompt */}
         {user.prompts && Object.keys(user.prompts).length > 0 && (
           <View style={styles.section}>
@@ -353,6 +444,10 @@ export default function SwipeCard({
             </Text>
           </View>
         )}
+        {/* Remaining photos (7, 8, 9) at the end */}
+        {user.photos && user.photos[6] && <ZoomablePhoto uri={user.photos[6]} />}
+        {user.photos && user.photos[7] && <ZoomablePhoto uri={user.photos[7]} />}
+        {user.photos && user.photos[8] && <ZoomablePhoto uri={user.photos[8]} />}
       </ScrollView>
     </View>
   );
@@ -370,8 +465,10 @@ const styles = StyleSheet.create({
   },
   photoContainer: {
     width: '100%',
-    height: 400, // or use height * 0.5 for more dynamic
+    height: height * 0.7,
     position: 'relative',
+    overflow: 'hidden', // ensure zoom stays inside
+    borderRadius: 20, // match card corners if needed
   },
   photoWrapper: {
     flex: 1,
@@ -634,6 +731,7 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 24,
+    marginTop: 16, // add space above each section (after a photo)
     paddingHorizontal: 20,
   },
   sectionTitle: {
