@@ -63,6 +63,8 @@ export default function VisualMatchScreen({
   isLoading = false 
 }: VisualMatchScreenProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [undoStack, setUndoStack] = useState<number[]>([]);
+  const [superLikeCount, setSuperLikeCount] = useState(1); // Günlük 1 super like örnek
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const scale = useSharedValue(1);
@@ -124,8 +126,26 @@ export default function VisualMatchScreen({
     return age;
   };
 
+  // Super Like handler
+  const handleSuperLike = () => {
+    if (superLikeCount > 0 && currentIndex < users.length) {
+      // Super Like işlemi (şimdilik sadece console)
+      console.log('Super Like:', users[currentIndex].id);
+      setSuperLikeCount(c => c - 1);
+      setUndoStack(stack => [...stack, currentIndex]);
+      setCurrentIndex(prev => prev + 1);
+    }
+  };
+  // Undo handler
+  const handleUndo = () => {
+    if (undoStack.length > 0) {
+      const lastIndex = undoStack[undoStack.length - 1];
+      setCurrentIndex(lastIndex);
+      setUndoStack(stack => stack.slice(0, -1));
+    }
+  };
+
   const handleSwipeComplete = (direction: 'left' | 'right') => {
-    console.log('Swipe completed:', direction);
     const user = users[currentIndex];
     if (user) {
       if (direction === 'right') {
@@ -133,6 +153,7 @@ export default function VisualMatchScreen({
       } else {
         onSwipeLeft(user.id);
       }
+      setUndoStack(stack => [...stack, currentIndex]);
     }
     setCurrentIndex(prev => prev + 1);
     
@@ -275,9 +296,10 @@ export default function VisualMatchScreen({
       >
         <SwipeCard
           user={swipeCardUser}
-          onInfoPress={() => console.log('Info pressed for', user.displayName)}
           onPassPress={() => handleProgrammaticSwipe('left')}
           onLikePress={() => handleProgrammaticSwipe('right')}
+          onSuperLikePress={handleSuperLike}
+          onUndoPress={handleUndo}
           swipeProgress={translateX}
         />
       </Animated.View>
@@ -332,7 +354,6 @@ export default function VisualMatchScreen({
           Swipe right to like, left to pass
         </Text>
       </View>
-
       <View style={styles.swiperContainer}>
         <View style={styles.cardStack}>
           {/* Next card preview */}
@@ -341,7 +362,6 @@ export default function VisualMatchScreen({
               {renderCard(users[currentIndex + 1], currentIndex + 1)}
             </View>
           )}
-          
           {/* Current card */}
           <PanGestureHandler onGestureEvent={gestureHandler}>
             <Animated.View style={[styles.currentCard, cardStyle]}>
@@ -350,39 +370,7 @@ export default function VisualMatchScreen({
           </PanGestureHandler>
         </View>
       </View>
-
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          {currentIndex + 1} of {users.length} profiles
-        </Text>
-        
-        {/* Action Button Bar */}
-        <View style={styles.actionButtonBar}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.passButton]}
-            onPress={() => handleProgrammaticSwipe('left')}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="close" size={28} color="#ff4444" />
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[styles.actionButton, styles.infoButton]}
-            onPress={() => console.log('Info pressed')}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="information-circle" size={28} color="#666" />
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[styles.actionButton, styles.likeButton]}
-            onPress={() => handleProgrammaticSwipe('right')}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="heart" size={28} color="#4CAF50" />
-          </TouchableOpacity>
-        </View>
-      </View>
+      {/* Footer and action buttons removed for minimal UI */}
     </SafeAreaView>
   );
 }
@@ -412,11 +400,17 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 0,
+    margin: 0,
+    width: '100%',
+    height: '100%',
   },
   cardStack: {
     position: 'relative',
-    width: width - 40,
-    height: height * 0.6,
+    width: '100%',
+    height: '100%',
+    margin: 0,
+    padding: 0,
   },
   currentCard: {
     position: 'absolute',

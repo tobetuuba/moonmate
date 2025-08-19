@@ -8,6 +8,8 @@ import {
   Modal,
   ScrollView,
   Alert,
+  Animated as RNAnimated,
+  Easing,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -49,22 +51,28 @@ interface User {
 
 interface SwipeCardProps {
   user: User;
-  onInfoPress?: () => void;
   onPassPress?: () => void;
   onLikePress?: () => void;
-  swipeProgress?: Animated.SharedValue<number>;
+  swipeProgress?: import('react-native-reanimated').SharedValue<number>;
 }
 
 export default function SwipeCard({ 
   user, 
-  onInfoPress, 
   onPassPress, 
   onLikePress,
+  onSuperLikePress,
+  onUndoPress,
   swipeProgress
-}: SwipeCardProps) {
-  const [showInfoModal, setShowInfoModal] = useState(false);
+}: SwipeCardProps & { onSuperLikePress?: () => void; onUndoPress?: () => void; }) {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
-  
+  const [showSuperLikeAnim, setShowSuperLikeAnim] = useState(false);
+  const [starAnims] = useState([
+    new RNAnimated.Value(0),
+    new RNAnimated.Value(0),
+    new RNAnimated.Value(0),
+    new RNAnimated.Value(0),
+    new RNAnimated.Value(0),
+  ]);
   const mainPhoto = user.photos?.[0] || null;
   const fallbackGradient = ['#667eea', '#764ba2'] as const;
   const hasMultiplePhotos = user.photos && user.photos.length > 1;
@@ -159,11 +167,6 @@ export default function SwipeCard({
     return value;
   };
 
-  const handleInfoPress = () => {
-    setShowInfoModal(true);
-    onInfoPress?.();
-  };
-
   const handlePhotoPress = () => {
     if (hasMultiplePhotos) {
       // TODO: Implement photo carousel
@@ -171,276 +174,203 @@ export default function SwipeCard({
     }
   };
 
+  const handleSuperLikePress = () => {
+    setShowSuperLikeAnim(true);
+    // Animate stars
+    starAnims.forEach((anim, i) => {
+      anim.setValue(0);
+      RNAnimated.timing(anim, {
+        toValue: 1,
+        duration: 1200,
+        delay: i * 100,
+        easing: Easing.out(Easing.exp),
+        useNativeDriver: true,
+      }).start();
+    });
+    setTimeout(() => setShowSuperLikeAnim(false), 1500);
+    if (onSuperLikePress) onSuperLikePress();
+  };
+
   return (
-    <>
-      <View style={styles.container}>
-        {/* Full-height Photo */}
-        <View style={styles.photoContainer}>
-          {mainPhoto ? (
-            <TouchableOpacity 
-              style={styles.photoWrapper}
-              onPress={handlePhotoPress}
-              activeOpacity={0.9}
-            >
-              <Image
-                source={{ uri: mainPhoto }}
-                style={styles.photo}
-                contentFit="cover"
-                cachePolicy="memory-disk"
-              />
-              
-              {/* Photo overlay indicators */}
-              {hasMultiplePhotos && (
-                <View style={styles.photoIndicators}>
-                  <View style={styles.photoCount}>
-                    <Ionicons name="images" size={16} color="#fff" />
-                    <Text style={styles.photoCountText}>
-                      {user.photos?.length} photos
-                    </Text>
-                  </View>
-                </View>
-              )}
-            </TouchableOpacity>
-          ) : (
-            <LinearGradient
-              colors={fallbackGradient}
-              style={styles.photo}
-            >
-              <View style={styles.placeholderContent}>
-                <Ionicons name="person" size={80} color="#fff" />
-                <Text style={styles.placeholderText}>No photo available</Text>
-              </View>
-            </LinearGradient>
-          )}
-          
-          {/* Gradient Overlay for User Info */}
-          <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.8)']}
-            locations={[0.4, 1]}
-            style={styles.userInfoOverlay}
-          >
-            {/* User Info */}
-            <View style={styles.userInfo}>
-              <View style={styles.nameRow}>
-                <Text style={styles.name}>{user.displayName}</Text>
-                <Text style={styles.age}>, {user.age}</Text>
-              </View>
-              
-              {user.profession && (
-                <Text style={styles.profession}>{user.profession}</Text>
-              )}
-              
-              {user.location?.city && (
-                <View style={styles.locationRow}>
-                  <Ionicons name="location" size={16} color="#fff" />
-                  <Text style={styles.location}>
-                    {user.location.city}
-                    {user.location.country && `, ${user.location.country}`}
-                  </Text>
-                </View>
-              )}
-              
-              {user.pronouns && (
-                <Text style={styles.pronouns}>{user.pronouns}</Text>
-              )}
+    <View style={styles.container}>
+      {/* Fotoğraf üstte, detaylar aşağıda scrollable */}
+      <View style={styles.photoContainer}>
+        {mainPhoto ? (
+          <Image
+            source={{ uri: mainPhoto }}
+            style={styles.photo}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+          />
+        ) : (
+          <LinearGradient colors={fallbackGradient} style={styles.photo}>
+            <View style={styles.placeholderContent}>
+              <Ionicons name="person" size={80} color="#fff" />
+              <Text style={styles.placeholderText}>No photo available</Text>
             </View>
           </LinearGradient>
-
-          {/* Swipe Feedback Overlays */}
-          <Animated.View style={[styles.swipeFeedback, styles.likeFeedback, likeStyle]}>
-            <Text style={styles.swipeFeedbackText}>❤️ LIKE</Text>
-          </Animated.View>
-          
-          <Animated.View style={[styles.swipeFeedback, styles.passFeedback, passStyle]}>
-            <Text style={styles.swipeFeedbackText}>❌ PASS</Text>
-          </Animated.View>
-        </View>
-
-        {/* Bottom Action Bar */}
-        <View style={styles.actionBar}>
-          <TouchableOpacity 
-            style={[styles.actionButton, styles.passButton]} 
-            onPress={onPassPress}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="close" size={24} color="#ff4444" />
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.actionButton, styles.infoButton]} 
-            onPress={handleInfoPress}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="information-circle" size={24} color="#666" />
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.actionButton, styles.likeButton]} 
-            onPress={onLikePress}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="heart" size={24} color="#4CAF50" />
-          </TouchableOpacity>
-        </View>
+        )}
       </View>
-
-      {/* Info Modal */}
-      <Modal
-        visible={showInfoModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowInfoModal(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>About {user.displayName}</Text>
-            <TouchableOpacity 
-              onPress={() => setShowInfoModal(false)}
-              style={styles.closeButton}
-            >
-              <Ionicons name="close" size={24} color="#666" />
-            </TouchableOpacity>
-          </View>
-          
-          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
-            {/* Bio Section */}
-            {(user.bio || user.prompts) && (
-              <View style={styles.modalSection}>
-                <Text style={styles.modalSectionTitle}>About</Text>
-                <Text style={styles.bioText}>
-                  {user.bio || 
-                   user.prompts?.['life-goal'] || 
-                   user.prompts?.['simple-pleasure'] ||
-                   "Looking for meaningful connections"}
-                </Text>
-              </View>
-            )}
-
-            {/* Interest Chips */}
-            {user.interests && user.interests.length > 0 && (
-              <View style={styles.modalSection}>
-                <Text style={styles.modalSectionTitle}>Interests</Text>
-                <View style={styles.interestsGrid}>
-                  {user.interests.map((interest, index) => (
-                    <View key={index} style={styles.interestChip}>
-                      <Ionicons 
-                        name={getInterestIcon(interest) as any} 
-                        size={14} 
-                        color="#667eea" 
-                      />
-                      <Text style={styles.interestText}>{interest}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {/* Lifestyle */}
-            {user.lifestyle && (
-              <View style={styles.modalSection}>
-                <Text style={styles.modalSectionTitle}>Lifestyle</Text>
-                <View style={styles.lifestyleContainer}>
-                  {user.lifestyle.smoking && (
-                    <View style={styles.lifestyleChip}>
-                      <Ionicons 
-                        name={getLifestyleIcon('smoking', user.lifestyle.smoking) as any} 
-                        size={14} 
-                        color="#667eea" 
-                      />
-                      <Text style={styles.lifestyleText}>
-                        {getLifestyleText('smoking', user.lifestyle.smoking)}
-                      </Text>
-                    </View>
-                  )}
-                  {user.lifestyle.drinking && (
-                    <View style={styles.lifestyleChip}>
-                      <Ionicons 
-                        name={getLifestyleIcon('drinking', user.lifestyle.drinking) as any} 
-                        size={14} 
-                        color="#667eea" 
-                      />
-                      <Text style={styles.lifestyleText}>
-                        {getLifestyleText('drinking', user.lifestyle.drinking)}
-                      </Text>
-                    </View>
-                  )}
-                  {user.lifestyle.exercise && (
-                    <View style={styles.lifestyleChip}>
-                      <Ionicons 
-                        name={getLifestyleIcon('exercise', user.lifestyle.exercise) as any} 
-                        size={14} 
-                        color="#667eea" 
-                      />
-                      <Text style={styles.lifestyleText}>
-                        {getLifestyleText('exercise', user.lifestyle.exercise)}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              </View>
-            )}
-
-            {/* Relationship Intent */}
-            <View style={styles.modalSection}>
-              <Text style={styles.modalSectionTitle}>Looking for</Text>
-              <View style={styles.intentContainer}>
-                {user.relationshipGoals?.map((goal, index) => (
-                  <View key={index} style={styles.intentChip}>
-                    <Ionicons name="heart" size={14} color="#e91e63" />
-                    <Text style={styles.intentText}>{goal}</Text>
-                  </View>
-                ))}
-                {user.childrenPlan && (
-                  <View style={styles.intentChip}>
-                    <Ionicons name="people" size={14} color="#e91e63" />
-                    <Text style={styles.intentText}>{user.childrenPlan}</Text>
-                  </View>
-                )}
-                {user.monogamy && (
-                  <View style={styles.intentChip}>
-                    <Ionicons name="heart-circle" size={14} color="#e91e63" />
-                    <Text style={styles.intentText}>{user.monogamy}</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-
-            {/* Mini Quote or Fun Fact */}
-            {user.prompts && Object.keys(user.prompts).length > 0 && (
-              <View style={styles.modalSection}>
-                <Text style={styles.modalSectionTitle}>Fun Facts</Text>
-                <View style={styles.quoteSection}>
-                  <Text style={styles.quoteText}>
-                    "{user.prompts['ideal-date'] || 
-                      user.prompts['travel-dream'] || 
-                      user.prompts['simple-pleasure'] ||
-                      'Looking for someone to share life\'s adventures with'}"
-                  </Text>
-                </View>
-              </View>
-            )}
-          </ScrollView>
+      {/* Floating Undo and Super Like buttons at top corners */}
+      <TouchableOpacity style={styles.floatingUndo} onPress={onUndoPress} activeOpacity={0.7}>
+        <Ionicons name="arrow-undo" size={22} color="#fff" />
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.floatingSuperLike} onPress={handleSuperLikePress} activeOpacity={0.7}>
+        <Ionicons name="star" size={22} color="#fff" />
+      </TouchableOpacity>
+      {/* Super Like Animation Overlay */}
+      {showSuperLikeAnim && (
+        <View style={styles.superLikeOverlay} pointerEvents="none">
+          <Text style={styles.superLikeText}>Super Like!</Text>
+          {/* Flying stars */}
+          {starAnims.map((anim, i) => {
+            const angle = (i / starAnims.length) * Math.PI * 2;
+            const radius = 120;
+            const translateX = anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, Math.cos(angle) * radius],
+            });
+            const translateY = anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, Math.sin(angle) * radius],
+            });
+            return (
+              <RNAnimated.View
+                key={i}
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  top: '50%',
+                  marginLeft: -12,
+                  marginTop: -12,
+                  transform: [
+                    { translateX },
+                    { translateY },
+                    { scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1.2] }) },
+                  ],
+                  opacity: anim.interpolate({ inputRange: [0, 0.7, 1], outputRange: [0, 1, 0.2] }),
+                }}
+              >
+                <Ionicons name="star" size={24} color="#FF3B30" />
+              </RNAnimated.View>
+            );
+          })}
         </View>
-      </Modal>
-    </>
+      )}
+      <ScrollView style={styles.detailsScroll} contentContainerStyle={{ paddingBottom: 24 }}>
+        {/* Basic Info Section (before About) */}
+        <View style={styles.basicInfoSection}>
+          <View style={styles.basicInfoRow}>
+            <Text style={styles.basicInfoName}>{user.displayName}</Text>
+            <Text style={styles.basicInfoAge}>, {user.age}</Text>
+          </View>
+          {user.profession && <Text style={styles.basicInfoProfession}>{user.profession}</Text>}
+          {user.location?.city && (
+            <View style={styles.basicInfoRow}>
+              <Ionicons name="location" size={16} color="#888" />
+              <Text style={styles.basicInfoLocation}>{user.location.city}{user.location.country && `, ${user.location.country}`}</Text>
+            </View>
+          )}
+          {user.pronouns && <Text style={styles.basicInfoPronouns}>{user.pronouns}</Text>}
+        </View>
+        {/* About Section */}
+        {(user.bio || user.prompts) && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>About</Text>
+            <Text style={styles.bioText}>{user.bio || user.prompts?.['simple-pleasure'] || 'Looking for meaningful connections'}</Text>
+          </View>
+        )}
+        {/* Looking for (moved up) */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Looking for</Text>
+          <View style={styles.intentContainer}>
+            {user.relationshipGoals?.map((goal, index) => (
+              <View key={index} style={styles.intentChip}>
+                <Ionicons name="heart" size={14} color="#e91e63" />
+                <Text style={styles.intentText}>{goal}</Text>
+              </View>
+            ))}
+            {user.childrenPlan && (
+              <View style={styles.intentChip}>
+                <Ionicons name="people" size={14} color="#e91e63" />
+                <Text style={styles.intentText}>{user.childrenPlan}</Text>
+              </View>
+            )}
+            {user.monogamy && (
+              <View style={styles.intentChip}>
+                <Ionicons name="heart-circle" size={14} color="#e91e63" />
+                <Text style={styles.intentText}>{user.monogamy}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+        {/* Interests */}
+        {user.interests && user.interests.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Interests</Text>
+            <View style={styles.interestsGrid}>
+              {user.interests.map((interest, index) => (
+                <View key={index} style={styles.interestChip}>
+                  <Ionicons name={getInterestIcon(interest) as any} size={14} color="#667eea" />
+                  <Text style={styles.interestText}>{interest}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+        {/* Lifestyle */}
+        {user.lifestyle && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Lifestyle</Text>
+            <View style={styles.lifestyleContainer}>
+              {user.lifestyle.smoking && (
+                <View style={styles.lifestyleChip}>
+                  <Ionicons name={getLifestyleIcon('smoking', user.lifestyle.smoking) as any} size={14} color="#667eea" />
+                  <Text style={styles.lifestyleText}>{getLifestyleText('smoking', user.lifestyle.smoking)}</Text>
+                </View>
+              )}
+              {user.lifestyle.drinking && (
+                <View style={styles.lifestyleChip}>
+                  <Ionicons name={getLifestyleIcon('drinking', user.lifestyle.drinking) as any} size={14} color="#667eea" />
+                  <Text style={styles.lifestyleText}>{getLifestyleText('drinking', user.lifestyle.drinking)}</Text>
+                </View>
+              )}
+              {user.lifestyle.exercise && (
+                <View style={styles.lifestyleChip}>
+                  <Ionicons name={getLifestyleIcon('exercise', user.lifestyle.exercise) as any} size={14} color="#667eea" />
+                  <Text style={styles.lifestyleText}>{getLifestyleText('exercise', user.lifestyle.exercise)}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+        {/* Fun Fact/Prompt */}
+        {user.prompts && Object.keys(user.prompts).length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Fun Fact</Text>
+            <Text style={styles.quoteText}>
+              "{user.prompts['ideal-date'] || user.prompts['travel-dream'] || user.prompts['simple-pleasure'] || 'Looking for someone to share life\'s adventures with'}"
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    width: CARD_WIDTH,
-    height: CARD_HEIGHT,
+    flex: 1,
+    width: '100%',
+    height: '100%',
     backgroundColor: '#fff',
-    borderRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 24,
-    elevation: 8,
+    borderRadius: 0,
+    shadowColor: 'transparent',
     overflow: 'hidden',
   },
   photoContainer: {
-    flex: 1,
+    width: '100%',
+    height: 400, // or use height * 0.5 for more dynamic
     position: 'relative',
   },
   photoWrapper: {
@@ -573,17 +503,13 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  passButton: {
-    borderWidth: 2,
-    borderColor: '#ff4444',
-  },
   infoButton: {
     borderWidth: 2,
     borderColor: '#ddd',
   },
-  likeButton: {
+  superLikeButton: {
     borderWidth: 2,
-    borderColor: '#4CAF50',
+    borderColor: '#2196F3',
   },
   // Modal Styles
   modalContainer: {
@@ -700,5 +626,131 @@ const styles = StyleSheet.create({
     color: '#4a5568',
     fontStyle: 'italic',
     lineHeight: 20,
+  },
+  detailsScroll: {
+    flex: 1,
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+  },
+  section: {
+    marginBottom: 24,
+    paddingHorizontal: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  undoButton: {
+    borderWidth: 2,
+    borderColor: '#888',
+  },
+  fixedActionBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingBottom: 24,
+    paddingTop: 8,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    gap: 32,
+    zIndex: 100,
+  },
+  floatingUndo: {
+    position: 'absolute',
+    top: 24,
+    left: 20,
+    zIndex: 100,
+    backgroundColor: '#888',
+    borderRadius: 24,
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  floatingSuperLike: {
+    position: 'absolute',
+    top: 24,
+    right: 20,
+    zIndex: 100,
+    backgroundColor: '#FF3B30', // vibrant red
+    borderRadius: 24,
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  superLikeOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 200,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+  },
+  superLikeText: {
+    fontSize: 36,
+    color: '#FF3B30',
+    fontWeight: 'bold',
+    textShadowColor: '#fff',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
+    marginBottom: 12,
+  },
+  basicInfoSection: {
+    marginBottom: 12,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 4,
+    // Remove background and borderRadius for seamless look
+  },
+  basicInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
+  },
+  basicInfoName: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#222',
+  },
+  basicInfoAge: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#444',
+  },
+  basicInfoProfession: {
+    fontSize: 15,
+    color: '#555',
+    fontStyle: 'italic',
+    marginBottom: 2,
+  },
+  basicInfoLocation: {
+    fontSize: 14,
+    color: '#666',
+  },
+  basicInfoPronouns: {
+    fontSize: 12,
+    color: '#888',
+    fontStyle: 'italic',
+    marginTop: 2,
   },
 });
