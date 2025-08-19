@@ -58,6 +58,7 @@ interface SwipeCardProps {
   onLikePress?: () => void;
   swipeProgress?: import('react-native-reanimated').SharedValue<number>;
   scrollRef?: any;
+  onRequestSuperLike?: () => void;
 }
 
 // Helper to render a zoomable photo
@@ -135,11 +136,11 @@ export default function SwipeCard({
   user, 
   onPassPress, 
   onLikePress,
-  onSuperLikePress,
+  onRequestSuperLike,
   onUndoPress,
   swipeProgress,
   scrollRef
-}: SwipeCardProps & { onSuperLikePress?: () => void; onUndoPress?: () => void; }) {
+}: SwipeCardProps & { onUndoPress?: () => void; }) {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [superLikeAnimKey, setSuperLikeAnimKey] = useState(0);
   const [starAnims] = useState([
@@ -356,7 +357,7 @@ export default function SwipeCard({
       }).start();
     });
     setTimeout(() => setSuperLikeAnimKey(0), 1500);
-    if (onSuperLikePress) onSuperLikePress();
+    if (onRequestSuperLike) onRequestSuperLike();
   };
 
   // Super Like and Undo button animations (modern, joyful)
@@ -454,7 +455,7 @@ export default function SwipeCard({
       {/* Floating Undo and Super Like buttons at top corners (over photo) */}
       {/* Super Like Button with Lottie animation and Halo */}
       <Animated.View style={[styles.superLikeHalo, superLikeHaloStyle]} pointerEvents="none" />
-      <TouchableOpacity style={[styles.floatingSuperLike, superLikeButtonStyle]} onPress={handleSuperLikePressWithAnim} activeOpacity={0.7}>
+      <TouchableOpacity style={[styles.floatingSuperLike, superLikeButtonStyle]} onPress={onRequestSuperLike} activeOpacity={0.7}>
         <Ionicons name="star" size={22} color="#fff" />
       </TouchableOpacity>
       {/* Undo Button with Flash */}

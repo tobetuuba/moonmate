@@ -23,6 +23,7 @@ import Animated, {
   interpolate,
   Extrapolate,
 } from 'react-native-reanimated';
+import { SuperLikeOverlay } from '../components/SuperLikeOverlay';
 
 interface User {
   id: string;
@@ -70,6 +71,8 @@ export default function VisualMatchScreen({
   const scale = useSharedValue(1);
   const rotate = useSharedValue(0);
   const scrollRef = useRef(null);
+  const [superLikeVisible, setSuperLikeVisible] = useState(false);
+  const [superLikePlayKey, setSuperLikePlayKey] = useState(0);
 
   // Reset animated values when currentIndex changes
   React.useEffect(() => {
@@ -139,6 +142,18 @@ export default function VisualMatchScreen({
     });
     
     handleSwipeComplete(direction);
+  };
+
+  const handleSuperLikeFromChild = () => {
+    if (currentIndex >= users.length) return;
+    setSuperLikeVisible(true);
+    setSuperLikePlayKey(k => k + 1);
+    setTimeout(() => {
+      onSwipeRight(users[currentIndex].id);
+      setUndoStack(stack => [...stack, { index: currentIndex, direction: 'right' }]);
+      setCurrentIndex(prev => prev + 1);
+    }, 650);
+    setTimeout(() => setSuperLikeVisible(false), 900);
   };
 
   const gestureHandler = useAnimatedGestureHandler({
@@ -260,7 +275,7 @@ export default function VisualMatchScreen({
           user={swipeCardUser}
           onPassPress={isCurrent ? () => handleProgrammaticSwipe('left') : undefined}
           onLikePress={isCurrent ? () => handleProgrammaticSwipe('right') : undefined}
-          onSuperLikePress={isCurrent ? handleSuperLike : undefined}
+          onRequestSuperLike={isCurrent ? handleSuperLikeFromChild : undefined}
           onUndoPress={isCurrent ? handleUndo : undefined}
           swipeProgress={isCurrent ? translateX : undefined}
           scrollRef={scrollRef}
@@ -317,6 +332,7 @@ export default function VisualMatchScreen({
           Swipe right to like, left to pass
         </Text>
       </View>
+      <SuperLikeOverlay visible={superLikeVisible} playKey={superLikePlayKey} />
       <View style={styles.swiperContainer}>
         <View style={styles.cardStack}>
           {/* Next card preview */}
