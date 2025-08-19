@@ -63,47 +63,13 @@ export default function VisualMatchScreen({
   isLoading = false 
 }: VisualMatchScreenProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [undoStack, setUndoStack] = useState<number[]>([]);
+  const [undoStack, setUndoStack] = useState<{ index: number; direction: 'left' | 'right' }[]>([]);
   const [superLikeCount, setSuperLikeCount] = useState(1); // Günlük 1 super like örnek
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const scale = useSharedValue(1);
   const rotate = useSharedValue(0);
-
-  // Animated styles for swipe labels
-  const likeLabelStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      translateX.value,
-      [0, width * 0.2],
-      [0, 1],
-      Extrapolate.CLAMP
-    ),
-    transform: [{
-      rotate: `${interpolate(
-        translateX.value,
-        [0, width * 0.2],
-        [0, 15],
-        Extrapolate.CLAMP
-      )}deg`
-    }]
-  }));
-
-  const passLabelStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      translateX.value,
-      [-width * 0.2, 0],
-      [1, 0],
-      Extrapolate.CLAMP
-    ),
-    transform: [{
-      rotate: `${interpolate(
-        translateX.value,
-        [-width * 0.2, 0],
-        [-15, 0],
-        Extrapolate.CLAMP
-      )}deg`
-    }]
-  }));
+  const scrollRef = useRef(null);
 
   // Reset animated values when currentIndex changes
   React.useEffect(() => {
@@ -129,18 +95,17 @@ export default function VisualMatchScreen({
   // Super Like handler
   const handleSuperLike = () => {
     if (superLikeCount > 0 && currentIndex < users.length) {
-      // Super Like işlemi (şimdilik sadece console)
-      console.log('Super Like:', users[currentIndex].id);
+      onSwipeRight(users[currentIndex].id); // add this line
       setSuperLikeCount(c => c - 1);
-      setUndoStack(stack => [...stack, currentIndex]);
+      setUndoStack(stack => [...stack, { index: currentIndex, direction: 'right' }]);
       setCurrentIndex(prev => prev + 1);
     }
   };
   // Undo handler
   const handleUndo = () => {
     if (undoStack.length > 0) {
-      const lastIndex = undoStack[undoStack.length - 1];
-      setCurrentIndex(lastIndex);
+      const last = undoStack[undoStack.length - 1];
+      setCurrentIndex(last.index);
       setUndoStack(stack => stack.slice(0, -1));
     }
   };
@@ -153,7 +118,7 @@ export default function VisualMatchScreen({
       } else {
         onSwipeLeft(user.id);
       }
-      setUndoStack(stack => [...stack, currentIndex]);
+      setUndoStack(stack => [...stack, { index: currentIndex, direction }]);
     }
     setCurrentIndex(prev => prev + 1);
     
@@ -261,7 +226,7 @@ export default function VisualMatchScreen({
     };
   });
 
-  const renderCard = (user: User, index: number) => {
+  const renderCard = (user: User, index: number, isCurrent: boolean, scrollRef?: any) => {
     const age = calculateAge(user.birthDate);
     
     // Transform user data to match SwipeCard interface
@@ -289,18 +254,16 @@ export default function VisualMatchScreen({
     return (
       <Animated.View
         key={user.id}
-        style={[
-          styles.card,
-          cardStyle,
-        ]}
+        style={styles.card}
       >
         <SwipeCard
           user={swipeCardUser}
-          onPassPress={() => handleProgrammaticSwipe('left')}
-          onLikePress={() => handleProgrammaticSwipe('right')}
-          onSuperLikePress={handleSuperLike}
-          onUndoPress={handleUndo}
-          swipeProgress={translateX}
+          onPassPress={isCurrent ? () => handleProgrammaticSwipe('left') : undefined}
+          onLikePress={isCurrent ? () => handleProgrammaticSwipe('right') : undefined}
+          onSuperLikePress={isCurrent ? handleSuperLike : undefined}
+          onUndoPress={isCurrent ? handleUndo : undefined}
+          swipeProgress={isCurrent ? translateX : undefined}
+          scrollRef={scrollRef}
         />
       </Animated.View>
     );
@@ -358,14 +321,19 @@ export default function VisualMatchScreen({
         <View style={styles.cardStack}>
           {/* Next card preview */}
           {currentIndex + 1 < users.length && (
-            <View style={styles.nextCard}>
-              {renderCard(users[currentIndex + 1], currentIndex + 1)}
+            <View style={[styles.nextCard, { pointerEvents: 'none' }]}>
+              {renderCard(users[currentIndex + 1], currentIndex + 1, false)}
             </View>
           )}
           {/* Current card */}
-          <PanGestureHandler onGestureEvent={gestureHandler}>
+          <PanGestureHandler
+            onGestureEvent={gestureHandler}
+            activeOffsetY={[-10, 10]}
+            activeOffsetX={[-20, 20]}
+            simultaneousHandlers={scrollRef}
+          >
             <Animated.View style={[styles.currentCard, cardStyle]}>
-              {renderCard(currentUser, currentIndex)}
+              {renderCard(currentUser, currentIndex, true, scrollRef)}
             </Animated.View>
           </PanGestureHandler>
         </View>

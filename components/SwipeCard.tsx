@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { PinchGestureHandler, PinchGestureHandlerGestureEvent } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -21,7 +20,9 @@ import Animated, {
   interpolate,
   Extrapolate,
   useAnimatedGestureHandler,
+  withSpring,
 } from 'react-native-reanimated';
+import { useRef } from 'react';
 
 const { width, height } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.9;
@@ -56,6 +57,7 @@ interface SwipeCardProps {
   onPassPress?: () => void;
   onLikePress?: () => void;
   swipeProgress?: import('react-native-reanimated').SharedValue<number>;
+  scrollRef?: any;
 }
 
 // Helper to render a zoomable photo
@@ -135,10 +137,11 @@ export default function SwipeCard({
   onLikePress,
   onSuperLikePress,
   onUndoPress,
-  swipeProgress
+  swipeProgress,
+  scrollRef
 }: SwipeCardProps & { onSuperLikePress?: () => void; onUndoPress?: () => void; }) {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
-  const [showSuperLikeAnim, setShowSuperLikeAnim] = useState(false);
+  const [superLikeAnimKey, setSuperLikeAnimKey] = useState(0);
   const [starAnims] = useState([
     new RNAnimated.Value(0),
     new RNAnimated.Value(0),
@@ -201,6 +204,82 @@ export default function SwipeCard({
     transform: [{ scale: pinchScale.value }],
   }));
 
+  // Add animated styles for swipe feedback overlays
+  const likeOverlayStyle = useAnimatedStyle(() => {
+    if (!swipeProgress) return { opacity: 0 };
+    return {
+      opacity: interpolate(swipeProgress.value, [0, width * 0.2], [0, 1], Extrapolate.CLAMP),
+      transform: [
+        { scale: interpolate(swipeProgress.value, [0, width * 0.2], [0.8, 1.1], Extrapolate.CLAMP) },
+        { rotate: '-10deg' },
+      ],
+    };
+  });
+  const nopeOverlayStyle = useAnimatedStyle(() => {
+    if (!swipeProgress) return { opacity: 0 };
+    return {
+      opacity: interpolate(swipeProgress.value, [-width * 0.2, 0], [1, 0], Extrapolate.CLAMP),
+      transform: [
+        { scale: interpolate(swipeProgress.value, [-width * 0.2, 0], [1.1, 0.8], Extrapolate.CLAMP) },
+        { rotate: '10deg' },
+      ],
+    };
+  });
+
+  // Animated styles for swipe feedback icons
+  const likeIconStyle = useAnimatedStyle(() => {
+    if (!swipeProgress) return { opacity: 0 };
+    return {
+      opacity: interpolate(swipeProgress.value, [0, width * 0.18], [0, 1], Extrapolate.CLAMP),
+      transform: [
+        { scale: interpolate(swipeProgress.value, [0, width * 0.18], [0.8, 1.2], Extrapolate.CLAMP) },
+      ],
+    };
+  });
+  const nopeIconStyle = useAnimatedStyle(() => {
+    if (!swipeProgress) return { opacity: 0 };
+    return {
+      opacity: interpolate(swipeProgress.value, [-width * 0.18, 0], [1, 0], Extrapolate.CLAMP),
+      transform: [
+        { scale: interpolate(swipeProgress.value, [-width * 0.18, 0], [1.2, 0.8], Extrapolate.CLAMP) },
+      ],
+    };
+  });
+
+  // Animated styles for big swipe feedback overlays
+  const bigLikeOverlayStyle = useAnimatedStyle(() => {
+    if (!swipeProgress) return { opacity: 0 };
+    return {
+      opacity: interpolate(swipeProgress.value, [0, width * 0.18, width * 0.4], [0, 0.5, 0.8], Extrapolate.CLAMP),
+      zIndex: 210,
+    };
+  });
+  const bigNopeOverlayStyle = useAnimatedStyle(() => {
+    if (!swipeProgress) return { opacity: 0 };
+    return {
+      opacity: interpolate(swipeProgress.value, [-width * 0.4, -width * 0.18, 0], [0.8, 0.5, 0], Extrapolate.CLAMP),
+      zIndex: 210,
+    };
+  });
+  const bigLikeIconStyle = useAnimatedStyle(() => {
+    if (!swipeProgress) return { opacity: 0, transform: [{ scale: 0.8 }] };
+    return {
+      opacity: interpolate(swipeProgress.value, [0, width * 0.18, width * 0.4], [0, 0.7, 1], Extrapolate.CLAMP),
+      transform: [
+        { scale: interpolate(swipeProgress.value, [0, width * 0.4], [0.8, 1.3], Extrapolate.CLAMP) },
+      ],
+    };
+  });
+  const bigNopeIconStyle = useAnimatedStyle(() => {
+    if (!swipeProgress) return { opacity: 0, transform: [{ scale: 0.8 }] };
+    return {
+      opacity: interpolate(swipeProgress.value, [-width * 0.4, -width * 0.18, 0], [1, 0.7, 0], Extrapolate.CLAMP),
+      transform: [
+        { scale: interpolate(swipeProgress.value, [-width * 0.4, 0], [1.3, 0.8], Extrapolate.CLAMP) },
+      ],
+    };
+  });
+
   const getInterestIcon = (interest: string) => {
     const iconMap: Record<string, string> = {
       'cooking': 'restaurant',
@@ -214,7 +293,7 @@ export default function SwipeCard({
       'fitness': 'fitness',
       'dancing': 'body',
       'writing': 'create',
-      'hiking': 'trail-sign',
+      'hiking': 'walk', // valid Ionicons
       'coffee': 'cafe',
       'wine': 'wine',
       'movies': 'film',
@@ -223,19 +302,22 @@ export default function SwipeCard({
       'fashion': 'shirt',
       'pets': 'paw',
       'gardening': 'flower',
+      'smoking': 'close-circle',
+      'drinking': 'wine',
+      'exercise': 'fitness',
     };
     return iconMap[interest.toLowerCase()] || 'heart';
   };
 
   const getLifestyleIcon = (type: string, value: string) => {
     if (type === 'smoking') {
-      return value === 'never' ? 'close-circle' : 'cigarette';
+      return value === 'never' ? 'close-circle' : 'warning';
     }
     if (type === 'drinking') {
-      return value === 'never' ? 'close-circle' : 'wine';
+      return 'wine';
     }
     if (type === 'exercise') {
-      return value === 'regularly' ? 'fitness' : 'body';
+      return 'fitness';
     }
     return 'heart';
   };
@@ -261,7 +343,7 @@ export default function SwipeCard({
   };
 
   const handleSuperLikePress = () => {
-    setShowSuperLikeAnim(true);
+    setSuperLikeAnimKey((k: number) => k + 1);
     // Animate stars
     starAnims.forEach((anim, i) => {
       anim.setValue(0);
@@ -273,21 +355,115 @@ export default function SwipeCard({
         useNativeDriver: true,
       }).start();
     });
-    setTimeout(() => setShowSuperLikeAnim(false), 1500);
+    setTimeout(() => setSuperLikeAnimKey(0), 1500);
     if (onSuperLikePress) onSuperLikePress();
   };
 
+  // Super Like and Undo button animations (modern, joyful)
+  const superLikeAnim = useSharedValue(1);
+  const superLikeRotate = useSharedValue(0);
+  const superLikeHalo = useSharedValue(0);
+  const undoAnim = useSharedValue(0);
+  const undoFlash = useSharedValue(0);
+  const superLikeButtonStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: superLikeAnim.value },
+      { rotate: `${superLikeRotate.value}deg` },
+    ],
+  }));
+  const superLikeHaloStyle = useAnimatedStyle(() => ({
+    opacity: 1 - superLikeHalo.value,
+    transform: [
+      { scale: 1 + superLikeHalo.value * 2 },
+    ],
+  }));
+  const undoButtonStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: undoAnim.value },
+    ],
+  }));
+  const undoFlashStyle = useAnimatedStyle(() => ({
+    opacity: undoFlash.value,
+  }));
+  const handleSuperLikePressWithAnim = () => {
+    setSuperLikeAnimKey((k: number) => k + 1);
+    setTimeout(() => {
+      superLikeAnim.value = 1;
+      superLikeRotate.value = 0;
+      superLikeHalo.value = 0;
+      superLikeAnim.value = 1.5;
+      superLikeRotate.value = -20;
+      superLikeHalo.value = 0;
+      superLikeHalo.value = withSpring(1, { damping: 5, stiffness: 120 });
+      superLikeAnim.value = withSpring(1, { damping: 4, stiffness: 200 });
+      superLikeRotate.value = withSpring(0, { damping: 4, stiffness: 200 });
+      setTimeout(() => { superLikeHalo.value = 0; }, 400);
+    }, 10);
+    setTimeout(() => setSuperLikeAnimKey(0), 1500);
+    handleSuperLikePress();
+  };
+  const handleUndoPressWithAnim = () => {
+    undoAnim.value = -18;
+    undoFlash.value = 1;
+    undoAnim.value = withSpring(18, { damping: 2, stiffness: 200 }, () => {
+      undoAnim.value = withSpring(0, { damping: 3, stiffness: 200 });
+    });
+    undoFlash.value = withSpring(0, { damping: 3, stiffness: 120 });
+    if (onUndoPress) onUndoPress();
+  };
+
+  useEffect(() => {
+    // Reset all Super Like and Undo animation states when card changes
+    superLikeAnim.value = 1;
+    superLikeRotate.value = 0;
+    superLikeHalo.value = 0;
+    setSuperLikeAnimKey(0); // Reset overlay trigger
+    undoAnim.value = 0;
+    undoFlash.value = 0;
+  }, [user.id]);
+
+  useEffect(() => {
+    // On every superLikeAnimKey change, force the animation to play
+    superLikeAnim.value = 1;
+    superLikeRotate.value = 0;
+    superLikeHalo.value = 0;
+    setTimeout(() => {
+      superLikeAnim.value = 1.5;
+      superLikeRotate.value = -20;
+      superLikeHalo.value = 0;
+      superLikeHalo.value = withSpring(1, { damping: 5, stiffness: 120 });
+      superLikeAnim.value = withSpring(1, { damping: 4, stiffness: 200 });
+      superLikeRotate.value = withSpring(0, { damping: 4, stiffness: 200 });
+      setTimeout(() => { superLikeHalo.value = 0; }, 400);
+    }, 20);
+  }, [superLikeAnimKey]);
+
   return (
     <View style={styles.container}>
+      {/* Big swipe feedback overlays */}
+      <Animated.View style={[styles.bigSwipeOverlay, styles.bigLikeOverlay, bigLikeOverlayStyle]} pointerEvents="none">
+        <Animated.View style={bigLikeIconStyle}>
+          <Ionicons name="heart" size={72} color="#fff" />
+        </Animated.View>
+      </Animated.View>
+      <Animated.View style={[styles.bigSwipeOverlay, styles.bigNopeOverlay, bigNopeOverlayStyle]} pointerEvents="none">
+        <Animated.View style={bigNopeIconStyle}>
+          <Ionicons name="close" size={72} color="#fff" />
+        </Animated.View>
+      </Animated.View>
       {/* Floating Undo and Super Like buttons at top corners (over photo) */}
-      <TouchableOpacity style={styles.floatingUndo} onPress={onUndoPress} activeOpacity={0.7}>
-        <Ionicons name="arrow-undo" size={22} color="#fff" />
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.floatingSuperLike} onPress={handleSuperLikePress} activeOpacity={0.7}>
+      {/* Super Like Button with Lottie animation and Halo */}
+      <Animated.View style={[styles.superLikeHalo, superLikeHaloStyle]} pointerEvents="none" />
+      <TouchableOpacity style={[styles.floatingSuperLike, superLikeButtonStyle]} onPress={handleSuperLikePressWithAnim} activeOpacity={0.7}>
         <Ionicons name="star" size={22} color="#fff" />
       </TouchableOpacity>
-      {/* Super Like Animation Overlay */}
-      {showSuperLikeAnim && (
+      {/* Undo Button with Flash */}
+      <Animated.View style={[styles.undoFlash, undoFlashStyle]} pointerEvents="none" />
+      <TouchableOpacity style={[styles.floatingUndo, undoButtonStyle]} onPress={handleUndoPressWithAnim} activeOpacity={0.7}>
+        <Ionicons name="arrow-undo" size={22} color="#fff" />
+      </TouchableOpacity>
+      {/* Super Like Animation Overlay (REAL) */}
+      {superLikeAnimKey > 0 && (
         <View style={styles.superLikeOverlay} pointerEvents="none">
           <Text style={styles.superLikeText}>Super Like!</Text>
           {starAnims.map((anim, i) => {
@@ -325,7 +501,7 @@ export default function SwipeCard({
         </View>
       )}
       {/* Unified ScrollView: photo and all details scroll together */}
-      <ScrollView style={styles.detailsScroll} contentContainerStyle={{ paddingBottom: 24 }}>
+      <ScrollView ref={scrollRef} style={styles.detailsScroll} contentContainerStyle={{ paddingBottom: 24 }}>
         {/* Profile Photo at the top of the scrollable area with pinch-to-zoom */}
         {user.photos && user.photos[0] ? (
           <ZoomablePhoto uri={user.photos[0]} />
@@ -468,7 +644,8 @@ const styles = StyleSheet.create({
     height: height * 0.7,
     position: 'relative',
     overflow: 'hidden', // ensure zoom stays inside
-    borderRadius: 20, // match card corners if needed
+    alignSelf: 'stretch',
+    // borderRadius removed
   },
   photoWrapper: {
     flex: 1,
@@ -476,6 +653,8 @@ const styles = StyleSheet.create({
   photo: {
     width: '100%',
     height: '100%',
+    alignSelf: 'stretch',
+    // No borderRadius here (container handles it)
   },
   placeholderContent: {
     flex: 1,
@@ -727,7 +906,7 @@ const styles = StyleSheet.create({
   detailsScroll: {
     flex: 1,
     backgroundColor: '#fff',
-    paddingHorizontal: 16,
+    // paddingHorizontal: 16, // remove horizontal padding
   },
   section: {
     marginBottom: 24,
@@ -850,5 +1029,85 @@ const styles = StyleSheet.create({
     color: '#888',
     fontStyle: 'italic',
     marginTop: 2,
+  },
+  swipeFeedbackOverlay: {
+    position: 'absolute',
+    top: 32,
+    left: 32,
+    zIndex: 200,
+    paddingVertical: 8,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    borderWidth: 3,
+    borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  likeOverlay: {
+    backgroundColor: 'rgba(76, 175, 80, 0.85)',
+    borderColor: 'rgba(76, 175, 80, 1)',
+  },
+  nopeOverlay: {
+    right: 32,
+    backgroundColor: 'rgba(255, 68, 68, 0.85)',
+    borderColor: 'rgba(255, 68, 68, 1)',
+  },
+  swipeIconOverlay: {
+    position: 'absolute',
+    top: 36,
+    zIndex: 210,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: 24,
+    padding: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.10,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  likeIconOverlay: {
+    left: 36,
+  },
+  nopeIconOverlay: {
+    right: 36,
+  },
+  bigSwipeOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 20,
+  },
+  bigLikeOverlay: {
+    backgroundColor: 'rgba(76, 175, 80, 0.35)',
+  },
+  bigNopeOverlay: {
+    backgroundColor: 'rgba(255, 68, 68, 0.35)',
+  },
+  superLikeHalo: {
+    position: 'absolute',
+    top: 24,
+    right: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,59,48,0.25)',
+    zIndex: 99,
+  },
+  undoFlash: {
+    position: 'absolute',
+    top: 24,
+    left: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(51, 153, 255, 0.18)',
+    zIndex: 99,
   },
 });
