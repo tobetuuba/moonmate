@@ -8,8 +8,6 @@ import {
   Modal,
   ScrollView,
   Alert,
-  Animated as RNAnimated,
-  Easing,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +21,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { useRef } from 'react';
+
 
 const { width, height } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.9;
@@ -142,14 +141,8 @@ export default function SwipeCard({
   scrollRef
 }: SwipeCardProps & { onUndoPress?: () => void; }) {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
-  const [superLikeAnimKey, setSuperLikeAnimKey] = useState(0);
-  const [starAnims] = useState([
-    new RNAnimated.Value(0),
-    new RNAnimated.Value(0),
-    new RNAnimated.Value(0),
-    new RNAnimated.Value(0),
-    new RNAnimated.Value(0),
-  ]);
+
+
   const mainPhoto = user.photos?.[0] || null;
   const fallbackGradient = ['#667eea', '#764ba2'] as const;
   const hasMultiplePhotos = user.photos && user.photos.length > 1;
@@ -344,40 +337,12 @@ export default function SwipeCard({
   };
 
   const handleSuperLikePress = () => {
-    setSuperLikeAnimKey((k: number) => k + 1);
-    // Animate stars
-    starAnims.forEach((anim, i) => {
-      anim.setValue(0);
-      RNAnimated.timing(anim, {
-        toValue: 1,
-        duration: 1200,
-        delay: i * 100,
-        easing: Easing.out(Easing.exp),
-        useNativeDriver: true,
-      }).start();
-    });
-    setTimeout(() => setSuperLikeAnimKey(0), 1500);
     if (onRequestSuperLike) onRequestSuperLike();
   };
 
-  // Super Like and Undo button animations (modern, joyful)
-  const superLikeAnim = useSharedValue(1);
-  const superLikeRotate = useSharedValue(0);
-  const superLikeHalo = useSharedValue(0);
+  // Undo button animations (modern, joyful)
   const undoAnim = useSharedValue(0);
   const undoFlash = useSharedValue(0);
-  const superLikeButtonStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scale: superLikeAnim.value },
-      { rotate: `${superLikeRotate.value}deg` },
-    ],
-  }));
-  const superLikeHaloStyle = useAnimatedStyle(() => ({
-    opacity: 1 - superLikeHalo.value,
-    transform: [
-      { scale: 1 + superLikeHalo.value * 2 },
-    ],
-  }));
   const undoButtonStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: undoAnim.value },
@@ -386,23 +351,6 @@ export default function SwipeCard({
   const undoFlashStyle = useAnimatedStyle(() => ({
     opacity: undoFlash.value,
   }));
-  const handleSuperLikePressWithAnim = () => {
-    setSuperLikeAnimKey((k: number) => k + 1);
-    setTimeout(() => {
-      superLikeAnim.value = 1;
-      superLikeRotate.value = 0;
-      superLikeHalo.value = 0;
-      superLikeAnim.value = 1.5;
-      superLikeRotate.value = -20;
-      superLikeHalo.value = 0;
-      superLikeHalo.value = withSpring(1, { damping: 5, stiffness: 120 });
-      superLikeAnim.value = withSpring(1, { damping: 4, stiffness: 200 });
-      superLikeRotate.value = withSpring(0, { damping: 4, stiffness: 200 });
-      setTimeout(() => { superLikeHalo.value = 0; }, 400);
-    }, 10);
-    setTimeout(() => setSuperLikeAnimKey(0), 1500);
-    handleSuperLikePress();
-  };
   const handleUndoPressWithAnim = () => {
     undoAnim.value = -18;
     undoFlash.value = 1;
@@ -414,30 +362,10 @@ export default function SwipeCard({
   };
 
   useEffect(() => {
-    // Reset all Super Like and Undo animation states when card changes
-    superLikeAnim.value = 1;
-    superLikeRotate.value = 0;
-    superLikeHalo.value = 0;
-    setSuperLikeAnimKey(0); // Reset overlay trigger
+    // Reset all Undo animation states when card changes
     undoAnim.value = 0;
     undoFlash.value = 0;
   }, [user.id]);
-
-  useEffect(() => {
-    // On every superLikeAnimKey change, force the animation to play
-    superLikeAnim.value = 1;
-    superLikeRotate.value = 0;
-    superLikeHalo.value = 0;
-    setTimeout(() => {
-      superLikeAnim.value = 1.5;
-      superLikeRotate.value = -20;
-      superLikeHalo.value = 0;
-      superLikeHalo.value = withSpring(1, { damping: 5, stiffness: 120 });
-      superLikeAnim.value = withSpring(1, { damping: 4, stiffness: 200 });
-      superLikeRotate.value = withSpring(0, { damping: 4, stiffness: 200 });
-      setTimeout(() => { superLikeHalo.value = 0; }, 400);
-    }, 20);
-  }, [superLikeAnimKey]);
 
   return (
     <View style={styles.container}>
@@ -452,55 +380,11 @@ export default function SwipeCard({
           <Ionicons name="close" size={72} color="#fff" />
         </Animated.View>
       </Animated.View>
-      {/* Floating Undo and Super Like buttons at top corners (over photo) */}
-      {/* Super Like Button with Lottie animation and Halo */}
-      <Animated.View style={[styles.superLikeHalo, superLikeHaloStyle]} pointerEvents="none" />
-      <TouchableOpacity style={[styles.floatingSuperLike, superLikeButtonStyle]} onPress={onRequestSuperLike} activeOpacity={0.7}>
-        <Ionicons name="star" size={22} color="#fff" />
-      </TouchableOpacity>
       {/* Undo Button with Flash */}
       <Animated.View style={[styles.undoFlash, undoFlashStyle]} pointerEvents="none" />
       <TouchableOpacity style={[styles.floatingUndo, undoButtonStyle]} onPress={handleUndoPressWithAnim} activeOpacity={0.7}>
         <Ionicons name="arrow-undo" size={22} color="#fff" />
       </TouchableOpacity>
-      {/* Super Like Animation Overlay (REAL) */}
-      {superLikeAnimKey > 0 && (
-        <View style={styles.superLikeOverlay} pointerEvents="none">
-          <Text style={styles.superLikeText}>Super Like!</Text>
-          {starAnims.map((anim, i) => {
-            const angle = (i / starAnims.length) * Math.PI * 2;
-            const radius = 120;
-            const translateX = anim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, Math.cos(angle) * radius],
-            });
-            const translateY = anim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, Math.sin(angle) * radius],
-            });
-            return (
-              <RNAnimated.View
-                key={i}
-                style={{
-                  position: 'absolute',
-                  left: '50%',
-                  top: '50%',
-                  marginLeft: -12,
-                  marginTop: -12,
-                  transform: [
-                    { translateX },
-                    { translateY },
-                    { scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1.2] }) },
-                  ],
-                  opacity: anim.interpolate({ inputRange: [0, 0.7, 1], outputRange: [0, 1, 0.2] }),
-                }}
-              >
-                <Ionicons name="star" size={24} color="#FF3B30" />
-              </RNAnimated.View>
-            );
-          })}
-        </View>
-      )}
       {/* Unified ScrollView: photo and all details scroll together */}
       <ScrollView ref={scrollRef} style={styles.detailsScroll} contentContainerStyle={{ paddingBottom: 24 }}>
         {/* Profile Photo at the top of the scrollable area with pinch-to-zoom */}
@@ -626,6 +510,8 @@ export default function SwipeCard({
         {user.photos && user.photos[7] && <ZoomablePhoto uri={user.photos[7]} />}
         {user.photos && user.photos[8] && <ZoomablePhoto uri={user.photos[8]} />}
       </ScrollView>
+      
+
     </View>
   );
 }
@@ -955,23 +841,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
   },
-  floatingSuperLike: {
-    position: 'absolute',
-    top: 24,
-    right: 20,
-    zIndex: 100,
-    backgroundColor: '#FF3B30', // vibrant red
-    borderRadius: 24,
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    elevation: 3,
-  },
+
   superLikeOverlay: {
     position: 'absolute',
     left: 0,
@@ -1084,6 +954,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 20,
+    zIndex: 150,
   },
   bigLikeOverlay: {
     backgroundColor: 'rgba(76, 175, 80, 0.35)',
@@ -1091,16 +962,7 @@ const styles = StyleSheet.create({
   bigNopeOverlay: {
     backgroundColor: 'rgba(255, 68, 68, 0.35)',
   },
-  superLikeHalo: {
-    position: 'absolute',
-    top: 24,
-    right: 20,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,59,48,0.25)',
-    zIndex: 99,
-  },
+
   undoFlash: {
     position: 'absolute',
     top: 24,

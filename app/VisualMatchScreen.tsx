@@ -14,16 +14,17 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { PanGestureHandler, State, GestureHandlerRootView } from 'react-native-gesture-handler';
 import SwipeCard from '../components/SwipeCard';
+import SuperLikeButton from '../components/SuperLikeButton';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   useAnimatedGestureHandler,
   withSpring,
+  withTiming,
   runOnJS,
   interpolate,
   Extrapolate,
 } from 'react-native-reanimated';
-import { SuperLikeOverlay } from '../components/SuperLikeOverlay';
 
 interface User {
   id: string;
@@ -65,14 +66,14 @@ export default function VisualMatchScreen({
 }: VisualMatchScreenProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [undoStack, setUndoStack] = useState<{ index: number; direction: 'left' | 'right' }[]>([]);
-  const [superLikeCount, setSuperLikeCount] = useState(1); // Günlük 1 super like örnek
+  const [superLikeCount, setSuperLikeCount] = useState(5); // Günlük 5 super like örnek
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const scale = useSharedValue(1);
   const rotate = useSharedValue(0);
+  const superLikeOpacity = useSharedValue(0);
+  const superLikeScale = useSharedValue(0.8);
   const scrollRef = useRef(null);
-  const [superLikeVisible, setSuperLikeVisible] = useState(false);
-  const [superLikePlayKey, setSuperLikePlayKey] = useState(0);
 
   // Reset animated values when currentIndex changes
   React.useEffect(() => {
@@ -80,7 +81,15 @@ export default function VisualMatchScreen({
     translateY.value = 0;
     rotate.value = 0;
     scale.value = 1;
+    superLikeOpacity.value = 0;
+    superLikeScale.value = 0.8;
   }, [currentIndex]);
+
+  // Super like burst overlay animated style
+  const superLikeOverlayStyle = useAnimatedStyle(() => ({
+    opacity: superLikeOpacity.value,
+    transform: [{ scale: superLikeScale.value }],
+  }));
 
   const calculateAge = (birthDate: string): number => {
     const today = new Date();
@@ -146,14 +155,24 @@ export default function VisualMatchScreen({
 
   const handleSuperLikeFromChild = () => {
     if (currentIndex >= users.length) return;
-    setSuperLikeVisible(true);
-    setSuperLikePlayKey(k => k + 1);
+    
+    // Animate super like burst overlay
+    superLikeOpacity.value = 0;
+    superLikeScale.value = 0.8;
+    superLikeOpacity.value = withTiming(1, { duration: 120 }, () => {
+      superLikeOpacity.value = withTiming(0, { duration: 180 });
+    });
+    superLikeScale.value = withSpring(1.25, { damping: 8, stiffness: 120 }, () => {
+      superLikeScale.value = withSpring(1, { damping: 8, stiffness: 120 });
+    });
+    
+    // Delay the actual swipe logic slightly so the animation plays
     setTimeout(() => {
       onSwipeRight(users[currentIndex].id);
       setUndoStack(stack => [...stack, { index: currentIndex, direction: 'right' }]);
       setCurrentIndex(prev => prev + 1);
-    }, 650);
-    setTimeout(() => setSuperLikeVisible(false), 900);
+      setSuperLikeCount(c => Math.max(0, c - 1));
+    }, 180);
   };
 
   const gestureHandler = useAnimatedGestureHandler({
@@ -332,9 +351,8 @@ export default function VisualMatchScreen({
           Swipe right to like, left to pass
         </Text>
       </View>
-      <SuperLikeOverlay visible={superLikeVisible} playKey={superLikePlayKey} />
       <View style={styles.swiperContainer}>
-        <View style={styles.cardStack}>
+        <View style={styles.cardStack} pointerEvents="box-none">
           {/* Next card preview */}
           {currentIndex + 1 < users.length && (
             <View style={[styles.nextCard, { pointerEvents: 'none' }]}>
@@ -352,6 +370,25 @@ export default function VisualMatchScreen({
               {renderCard(currentUser, currentIndex, true, scrollRef)}
             </Animated.View>
           </PanGestureHandler>
+          
+          <SuperLikeButton
+            count={superLikeCount}
+            disabled={superLikeCount <= 0}
+            onPress={handleSuperLikeFromChild}
+            onLongPressPreview={() => {}}
+            style={styles.floatingSuperLike}
+            testID="super-like-button"
+          />
+          
+          {/* Super like burst overlay */}
+          <Animated.View 
+            style={[StyleSheet.absoluteFillObject, superLikeOverlayStyle, { zIndex: 600 }]}
+            pointerEvents="none"
+          >
+            <View style={styles.superLikeBurst}>
+              <Ionicons name="star" size={96} color="#fff" />
+            </View>
+          </Animated.View>
         </View>
       </View>
       {/* Footer and action buttons removed for minimal UI */}
@@ -598,5 +635,31 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  floatingSuperLike: {
+    position: 'absolute',
+    top: 24,
+    right: 20,
+    zIndex: 500,
+    elevation: 16,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  superLikeBurst: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: 'rgba(255,107,157,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#FF6B9D',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 12,
   },
 }); 
