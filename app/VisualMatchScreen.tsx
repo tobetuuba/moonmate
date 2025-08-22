@@ -506,11 +506,6 @@ export default function VisualMatchScreen({
             testID="super-like-button"
           />
           
-          {/* Super like count label */}
-          <View style={styles.superLikeCountLabel}>
-            <Text style={styles.superLikeCountText}>{superLikeCount}</Text>
-          </View>
-          
           {/* Super like burst overlay */}
           <Animated.View 
             style={[styles.superLikeOverlayContainer, { zIndex: 600 }]}
@@ -853,27 +848,5 @@ const styles = StyleSheet.create({
   s4: {
     bottom: '48%',
     right: '48%',
-  },
-  superLikeCountLabel: {
-    position: 'absolute',
-    top: 24,
-    right: 84, // Position to the right of the SuperLikeButton (56px button + 8px spacing + 20px right margin)
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    minWidth: 24,
-    zIndex: 500,
-  },
-  superLikeCountText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
   },
 }); 

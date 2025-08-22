@@ -267,8 +267,8 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: 'absolute',
-    top: -BADGE_SIZE / 2 + 8,
-    right: -BADGE_SIZE / 2 + 8,
+    top: 0, // Badge'i button'ın üzerine yerleştir
+    right: 0, // Badge'i button'ın sağ tarafına yerleştir
     minWidth: BADGE_SIZE,
     height: BADGE_SIZE,
     borderRadius: BADGE_SIZE / 2,
