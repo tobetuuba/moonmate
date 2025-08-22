@@ -71,8 +71,21 @@ export default function VisualMatchScreen({
   const translateY = useSharedValue(0);
   const scale = useSharedValue(1);
   const rotate = useSharedValue(0);
-  const superLikeOpacity = useSharedValue(0);
-  const superLikeScale = useSharedValue(0.8);
+  const burstOpacity = useSharedValue(0);
+  const burstScale = useSharedValue(0.8);
+  const burstRotate = useSharedValue(0);
+  const ringScale = useSharedValue(0.6);
+  const ringOpacity = useSharedValue(0);
+  const glowScale = useSharedValue(0.8);
+  const glowOpacity = useSharedValue(0);
+  const sparkle1Scale = useSharedValue(0);
+  const sparkle1Opacity = useSharedValue(0);
+  const sparkle2Scale = useSharedValue(0);
+  const sparkle2Opacity = useSharedValue(0);
+  const sparkle3Scale = useSharedValue(0);
+  const sparkle3Opacity = useSharedValue(0);
+  const sparkle4Scale = useSharedValue(0);
+  const sparkle4Opacity = useSharedValue(0);
   const scrollRef = useRef(null);
 
   // Reset animated values when currentIndex changes
@@ -81,14 +94,60 @@ export default function VisualMatchScreen({
     translateY.value = 0;
     rotate.value = 0;
     scale.value = 1;
-    superLikeOpacity.value = 0;
-    superLikeScale.value = 0.8;
+    burstOpacity.value = 0;
+    burstScale.value = 0.8;
+    burstRotate.value = 0;
+    ringScale.value = 0.6;
+    ringOpacity.value = 0;
+    glowScale.value = 0.8;
+    glowOpacity.value = 0;
+    sparkle1Scale.value = 0;
+    sparkle1Opacity.value = 0;
+    sparkle2Scale.value = 0;
+    sparkle2Opacity.value = 0;
+    sparkle3Scale.value = 0;
+    sparkle3Opacity.value = 0;
+    sparkle4Scale.value = 0;
+    sparkle4Opacity.value = 0;
   }, [currentIndex]);
 
-  // Super like burst overlay animated style
-  const superLikeOverlayStyle = useAnimatedStyle(() => ({
-    opacity: superLikeOpacity.value,
-    transform: [{ scale: superLikeScale.value }],
+  // Super like burst overlay animated styles
+  const burstStyle = useAnimatedStyle(() => ({
+    opacity: burstOpacity.value,
+    transform: [
+      { scale: burstScale.value },
+      { rotate: `${burstRotate.value}deg` }
+    ],
+  }));
+
+  const ringStyle = useAnimatedStyle(() => ({
+    opacity: ringOpacity.value,
+    transform: [{ scale: ringScale.value }],
+  }));
+
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: glowOpacity.value,
+    transform: [{ scale: glowScale.value }],
+  }));
+
+  const sparkle1Style = useAnimatedStyle(() => ({
+    opacity: sparkle1Opacity.value,
+    transform: [{ scale: sparkle1Scale.value }],
+  }));
+
+  const sparkle2Style = useAnimatedStyle(() => ({
+    opacity: sparkle2Opacity.value,
+    transform: [{ scale: sparkle2Scale.value }],
+  }));
+
+  const sparkle3Style = useAnimatedStyle(() => ({
+    opacity: sparkle3Opacity.value,
+    transform: [{ scale: sparkle3Scale.value }],
+  }));
+
+  const sparkle4Style = useAnimatedStyle(() => ({
+    opacity: sparkle4Opacity.value,
+    transform: [{ scale: sparkle4Scale.value }],
   }));
 
   const calculateAge = (birthDate: string): number => {
@@ -156,23 +215,90 @@ export default function VisualMatchScreen({
   const handleSuperLikeFromChild = () => {
     if (currentIndex >= users.length) return;
     
-    // Animate super like burst overlay
-    superLikeOpacity.value = 0;
-    superLikeScale.value = 0.8;
-    superLikeOpacity.value = withTiming(1, { duration: 120 }, () => {
-      superLikeOpacity.value = withTiming(0, { duration: 180 });
+    // Reset all animation values
+    burstOpacity.value = 0;
+    burstScale.value = 0.8;
+    burstRotate.value = 0;
+    ringScale.value = 0.6;
+    ringOpacity.value = 0;
+    glowScale.value = 0.8;
+    glowOpacity.value = 0;
+    sparkle1Scale.value = 0;
+    sparkle1Opacity.value = 0;
+    sparkle2Scale.value = 0;
+    sparkle2Opacity.value = 0;
+    sparkle3Scale.value = 0;
+    sparkle3Opacity.value = 0;
+    sparkle4Scale.value = 0;
+    sparkle4Opacity.value = 0;
+    
+    // Animate star burst
+    burstOpacity.value = withTiming(1, { duration: 220 }, () => {
+      burstOpacity.value = withTiming(0, { duration: 300 });
     });
-    superLikeScale.value = withSpring(1.25, { damping: 8, stiffness: 120 }, () => {
-      superLikeScale.value = withSpring(1, { damping: 8, stiffness: 120 });
+    burstScale.value = withSpring(1.15, { damping: 8, stiffness: 120 }, () => {
+      burstScale.value = withSpring(1, { damping: 8, stiffness: 120 });
+    });
+    burstRotate.value = withSpring(18, { damping: 6, stiffness: 100 }, () => {
+      burstRotate.value = withSpring(0, { damping: 6, stiffness: 100 });
     });
     
-    // Delay the actual swipe logic slightly so the animation plays
+    // Animate glow
+    glowOpacity.value = withTiming(0.45, { duration: 180 }, () => {
+      glowOpacity.value = withTiming(0, { duration: 260 });
+    });
+    glowScale.value = withSpring(1.25, { damping: 8, stiffness: 120 });
+    
+    // Animate expanding ring
+    ringScale.value = withSpring(1.6, { damping: 6, stiffness: 100 });
+    ringOpacity.value = withTiming(0.8, { duration: 220 }, () => {
+      ringOpacity.value = withTiming(0, { duration: 300 });
+    });
+    
+    // Animate sparkles in stagger
+    setTimeout(() => {
+      sparkle1Opacity.value = withTiming(1, { duration: 180 }, () => {
+        sparkle1Opacity.value = withTiming(0, { duration: 260 });
+      });
+      sparkle1Scale.value = withSpring(1.2, { damping: 5, stiffness: 120 }, () => {
+        sparkle1Scale.value = withSpring(1, { damping: 5, stiffness: 120 });
+      });
+    }, 40);
+    
+    setTimeout(() => {
+      sparkle2Opacity.value = withTiming(1, { duration: 180 }, () => {
+        sparkle2Opacity.value = withTiming(0, { duration: 260 });
+      });
+      sparkle2Scale.value = withSpring(1.2, { damping: 5, stiffness: 120 }, () => {
+        sparkle2Scale.value = withSpring(1, { damping: 5, stiffness: 120 });
+      });
+    }, 80);
+    
+    setTimeout(() => {
+      sparkle3Opacity.value = withTiming(1, { duration: 180 }, () => {
+        sparkle3Opacity.value = withTiming(0, { duration: 260 });
+      });
+      sparkle3Scale.value = withSpring(1.2, { damping: 5, stiffness: 120 }, () => {
+        sparkle3Scale.value = withSpring(1, { damping: 5, stiffness: 120 });
+      });
+    }, 120);
+    
+    setTimeout(() => {
+      sparkle4Opacity.value = withTiming(1, { duration: 180 }, () => {
+        sparkle4Opacity.value = withTiming(0, { duration: 260 });
+      });
+      sparkle4Scale.value = withSpring(1.2, { damping: 5, stiffness: 120 }, () => {
+        sparkle4Scale.value = withSpring(1, { damping: 5, stiffness: 120 });
+      });
+    }, 160);
+    
+    // Delay the actual swipe logic so the animation is visible
     setTimeout(() => {
       onSwipeRight(users[currentIndex].id);
       setUndoStack(stack => [...stack, { index: currentIndex, direction: 'right' }]);
       setCurrentIndex(prev => prev + 1);
       setSuperLikeCount(c => Math.max(0, c - 1));
-    }, 180);
+    }, 220);
   };
 
   const gestureHandler = useAnimatedGestureHandler({
@@ -380,14 +506,32 @@ export default function VisualMatchScreen({
             testID="super-like-button"
           />
           
+          {/* Super like count label */}
+          <View style={styles.superLikeCountLabel}>
+            <Text style={styles.superLikeCountText}>{superLikeCount}</Text>
+          </View>
+          
           {/* Super like burst overlay */}
           <Animated.View 
-            style={[StyleSheet.absoluteFillObject, superLikeOverlayStyle, { zIndex: 600 }]}
+            style={[styles.superLikeOverlayContainer, { zIndex: 600 }]}
             pointerEvents="none"
           >
-            <View style={styles.superLikeBurst}>
+            {/* Animated glow circle */}
+            <Animated.View style={[styles.superLikeGlow, glowStyle]} />
+            
+            {/* Animated expanding ring */}
+            <Animated.View style={[styles.superLikeRing, ringStyle]} />
+            
+            {/* Animated star burst */}
+            <Animated.View style={[styles.superLikeBurst, burstStyle]}>
               <Ionicons name="star" size={96} color="#fff" />
-            </View>
+            </Animated.View>
+            
+            {/* Four small white sparkles positioned around the center */}
+            <Animated.View style={[styles.sparkle, styles.s1, sparkle1Style]} />
+            <Animated.View style={[styles.sparkle, styles.s2, sparkle2Style]} />
+            <Animated.View style={[styles.sparkle, styles.s3, sparkle3Style]} />
+            <Animated.View style={[styles.sparkle, styles.s4, sparkle4Style]} />
           </Animated.View>
         </View>
       </View>
@@ -653,13 +797,83 @@ const styles = StyleSheet.create({
     width: 160,
     height: 160,
     borderRadius: 80,
-    backgroundColor: 'rgba(255,107,157,0.35)',
+    backgroundColor: 'rgba(255,107,157,0.4)',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#FF6B9D',
-    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.35,
-    shadowRadius: 20,
+    shadowRadius: 22,
     elevation: 12,
+  },
+  superLikeOverlayContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  superLikeRing: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    borderWidth: 3,
+    borderColor: 'rgba(255,107,157,0.75)',
+  },
+  superLikeGlow: {
+    position: 'absolute',
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: 'rgba(255,107,157,0.22)',
+    shadowColor: '#FF6B9D',
+    shadowOpacity: 0.5,
+    shadowRadius: 30,
+  },
+  sparkle: {
+    position: 'absolute',
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#fff',
+    shadowColor: '#fff',
+    shadowOpacity: 0.8,
+    shadowRadius: 6,
+  },
+  s1: {
+    top: '42%',
+    left: '52%',
+  },
+  s2: {
+    top: '52%',
+    right: '42%',
+  },
+  s3: {
+    bottom: '42%',
+    left: '48%',
+  },
+  s4: {
+    bottom: '48%',
+    right: '48%',
+  },
+  superLikeCountLabel: {
+    position: 'absolute',
+    top: 24,
+    right: 84, // Position to the right of the SuperLikeButton (56px button + 8px spacing + 20px right margin)
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    minWidth: 24,
+    zIndex: 500,
+  },
+  superLikeCountText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 }); 
