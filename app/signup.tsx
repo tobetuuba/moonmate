@@ -80,7 +80,7 @@ export default function SignUpScreen() {
       console.log('Anonymous signup successful:', userCredential.user.uid);
       
       Alert.alert('Success', 'Account created successfully!', [
-        { text: 'OK', onPress: () => router.push('/create-profile') }
+        { text: 'OK', onPress: () => router.push('/create-profile-new') }
       ]);
     } catch (error: any) {
       console.error('Phone signup error:', error);
@@ -114,7 +114,7 @@ export default function SignUpScreen() {
       console.log('Email signup successful:', userCredential.user.uid);
       
       Alert.alert('Success', 'Account created successfully!', [
-        { text: 'OK', onPress: () => router.push('/create-profile') }
+        { text: 'OK', onPress: () => router.push('/create-profile-new') }
       ]);
     } catch (error: any) {
       console.error('Email signup error:', error);
