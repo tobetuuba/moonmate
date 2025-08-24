@@ -65,13 +65,16 @@ export const step1Schema = yup.object({
 // Step 2: Relationship Goals validation
 export const step2Schema = yup.object({
   relationshipType: yup
-    .string()
+    .array()
+    .of(yup.string())
+    .min(1, 'Please select at least one relationship type')
     .required('Relationship type is required'),
   monogamy: yup
     .boolean()
     .required(),
   childrenPlan: yup
-    .string()
+    .array()
+    .of(yup.string())
     .optional(),
 });
 

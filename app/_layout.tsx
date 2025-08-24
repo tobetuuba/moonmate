@@ -8,11 +8,10 @@ import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider } from '../context/AuthContext';
 import { NotificationProvider } from '../context/NotificationContext';
 import { ThemeProvider } from '../context/ThemeContext';
-import { useProfileCheck } from '../hooks/useProfileCheck';
-
 export default function RootLayout() {
   useFrameworkReady();
-  const { isLoading } = useProfileCheck();
+  
+  console.log('🔍 RootLayout rendering');
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

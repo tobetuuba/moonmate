@@ -246,9 +246,9 @@ const INITIAL_FORM_DATA: FormData = {
   sexualOrientation: [],
   customOrientation: '',
 
-  relationshipType: '',
+  relationshipType: [],
   monogamy: true,
-  childrenPlan: '',
+  childrenPlan: [],
   childrenPlanDetails: '',
 
   bio: '',
@@ -272,6 +272,8 @@ const INITIAL_FORM_DATA: FormData = {
 };
 
 export default function CreateProfileNewScreen() {
+  console.log('🔍 CreateProfileNewScreen mounting');
+  
   const [currentStep, setCurrentStep] = useState(1);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const { 
@@ -282,7 +284,15 @@ export default function CreateProfileNewScreen() {
     handleSubmit, 
     isSubmitting,
     errors,
+    setFieldTouched,
   } = useCreateProfileForm();
+  
+  console.log('🔍 CreateProfileNewScreen - useCreateProfileForm result:', {
+    formData: !!formData,
+    updateFormData: !!updateFormData,
+    errors: !!errors,
+    isSubmitting
+  });
   
   // Animation values
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -491,8 +501,14 @@ export default function CreateProfileNewScreen() {
   );
 
   const renderCurrentStep = () => {
+    console.log('🔍 renderCurrentStep called with step:', currentStep);
+    console.log('🔍 formData:', formData);
+    console.log('🔍 errors:', errors);
+    console.log('🔍 touched:', touched);
+    
     switch (currentStep) {
       case 1:
+        console.log('🔍 Rendering Step1BasicInfo');
         return (
           <Step1BasicInfo
             formData={formData}
@@ -506,10 +522,14 @@ export default function CreateProfileNewScreen() {
           />
         );
       case 2:
+        console.log('🔍 Rendering Step2RelationshipGoals');
         return (
           <Step2RelationshipGoals
             formData={formData}
             updateFormData={updateFormData}
+            errors={errors}
+            touched={touched}
+            setFieldTouched={setFieldTouched}
           />
         );
       case 3:

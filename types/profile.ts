@@ -129,9 +129,9 @@ export interface BasicInfo {
 }
 
 export interface RelationshipGoals {
-  relationshipType: string;
+  relationshipType: string[];
   monogamy: boolean;
-  childrenPlan: string;
+  childrenPlan: string[];
   childrenPlanDetails?: string;
 }
 
@@ -196,9 +196,9 @@ export interface CreateProfileFormData {
   maxDistance: number;
 
   // Step 2: Relationship Goals
-  relationshipType: string;
+  relationshipType: string[];
   monogamy: boolean;
-  childrenPlan: string;
+  childrenPlan: string[];
   childrenPlanDetails?: string;
 
   // Step 3: About & Prompts

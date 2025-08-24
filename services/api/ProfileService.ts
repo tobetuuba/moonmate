@@ -16,19 +16,16 @@ type MatchPrefs = {
 
 // Remove RelationshipPrefs type since we're merging it into MatchPrefs
 
-// Helper function to map relationship type to intent
-const mapRelationshipTypeToIntent = (t?: string): MatchPrefs['intent'] => {
-  switch (t) {
-    case 'serious':
-    case 'marriage':
-      return 'serious';
-    case 'friendship':
-      return 'friendship';
-    case 'fun':
-      return 'fun';
-    default:
-      return 'unsure';
-  }
+// Helper function to map relationship type array to intent
+const mapRelationshipTypeToIntent = (types?: string[]): MatchPrefs['intent'] => {
+  if (!types || types.length === 0) return 'unsure';
+  
+  // If multiple types are selected, prioritize in this order
+  if (types.includes('serious') || types.includes('marriage')) return 'serious';
+  if (types.includes('fun')) return 'fun';
+  if (types.includes('friendship')) return 'friendship';
+  
+  return 'unsure';
 };
 
 export class ProfileService {

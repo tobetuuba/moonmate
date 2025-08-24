@@ -9,7 +9,7 @@ import { useProfileCheck } from '../../hooks/useProfileCheck';
 import { View, ActivityIndicator } from 'react-native';
 
 export default function TabLayout() {
-  const { isLoading } = useProfileCheck();
+  const { isLoading, hasProfile } = useProfileCheck();
 
   if (isLoading) {
     return (
@@ -17,6 +17,11 @@ export default function TabLayout() {
         <ActivityIndicator size="large" color={colors.primary[500]} />
       </View>
     );
+  }
+
+  // If no profile exists, don't render tabs
+  if (!hasProfile) {
+    return null;
   }
 
   return (

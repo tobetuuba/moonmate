@@ -34,9 +34,9 @@ const INITIAL_FORM_DATA: FormData = {
   },
   maxDistance: 50,
 
-  relationshipType: '',
+  relationshipType: [],
   monogamy: true,
-  childrenPlan: '',
+  childrenPlan: [],
   childrenPlanDetails: '',
 
   bio: '',
@@ -84,8 +84,14 @@ export function useCreateProfileForm() {
   });
 
   const formData = watch();
+  
+  // Debug: Log formData changes
+  console.log('🔍 useCreateProfileForm - formData:', formData);
+  console.log('🔍 useCreateProfileForm - relationshipType:', formData?.relationshipType);
+  console.log('🔍 useCreateProfileForm - childrenPlan:', formData?.childrenPlan);
 
   const updateFormData = (field: keyof FormData, value: any) => {
+    console.log('🔍 updateFormData called with:', field, value);
     setValue(field, value, { shouldValidate: true });
   };
 
@@ -233,5 +239,9 @@ export function useCreateProfileForm() {
     isSubmitting,
     errors,
     control,
+    setFieldTouched: (field: string, touched: boolean) => {
+      // This is a simple implementation - you might want to enhance it
+      console.log('🔍 setFieldTouched called with:', field, touched);
+    },
   };
 }

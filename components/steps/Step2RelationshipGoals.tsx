@@ -9,6 +9,7 @@ import OptionGrid from '../OptionGrid';
 const RELATIONSHIP_TYPE_OPTIONS = [
   { label: 'Serious Relationship', value: 'serious' },
   { label: 'Marriage', value: 'marriage' },
+  { label: 'Fun', value: 'fun' },
   { label: 'Not Sure', value: 'unsure' },
 ];
 
@@ -25,12 +26,29 @@ import { RelationshipGoals } from '../../types/profile';
 interface Step2RelationshipGoalsProps {
   formData: RelationshipGoals;
   updateFormData: (field: keyof RelationshipGoals, value: any) => void;
+  errors?: any;
+  touched?: any;
+  setFieldTouched?: (field: string, touched: boolean) => void;
 }
 
 export default function Step2RelationshipGoals({
   formData,
   updateFormData,
+  errors,
+  touched,
+  setFieldTouched,
 }: Step2RelationshipGoalsProps) {
+  // Debug: Check if formData is undefined
+  console.log('🔍 Step2RelationshipGoals - formData:', formData);
+  console.log('🔍 Step2RelationshipGoals - relationshipType:', formData?.relationshipType);
+  console.log('🔍 Step2RelationshipGoals - childrenPlan:', formData?.childrenPlan);
+  
+  // Safety check
+  if (!formData) {
+    console.error('❌ Step2RelationshipGoals - formData is undefined');
+    return null;
+  }
+  
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>Relationship Goals</Text>
@@ -40,9 +58,19 @@ export default function Step2RelationshipGoals({
         <Text style={styles.inputLabel}>What type of relationship are you looking for? *</Text>
         <OptionGrid
           options={RELATIONSHIP_TYPE_OPTIONS}
-          selectedValues={formData.relationshipType}
-          onSelectionChange={(value) => updateFormData('relationshipType', value)}
+          selectedValues={Array.isArray(formData?.relationshipType) ? formData.relationshipType : []}
+          onSelectionChange={(value) => {
+            updateFormData('relationshipType', value);
+            setFieldTouched?.('relationshipType', true);
+          }}
+          multiSelect={true}
+          hasError={touched?.relationshipType && errors?.relationshipType}
         />
+        {touched?.relationshipType && errors?.relationshipType && (
+          <Text style={styles.errorText}>
+            {typeof errors.relationshipType === 'string' ? errors.relationshipType : 'Please select at least one relationship type'}
+          </Text>
+        )}
       </View>
 
       {/* Monogamy Toggle */}
@@ -52,13 +80,13 @@ export default function Step2RelationshipGoals({
           <TouchableOpacity
             style={[
               styles.toggleOption,
-              formData.monogamy && styles.toggleOptionSelected,
+              formData?.monogamy === true && styles.toggleOptionSelected,
             ]}
             onPress={() => updateFormData('monogamy', true)}
           >
             <Text style={[
               styles.toggleOptionText,
-              formData.monogamy && styles.toggleOptionTextSelected,
+              formData?.monogamy === true && styles.toggleOptionTextSelected,
             ]}>
               Monogamy
             </Text>
@@ -66,13 +94,13 @@ export default function Step2RelationshipGoals({
           <TouchableOpacity
             style={[
               styles.toggleOption,
-              !formData.monogamy && styles.toggleOptionSelected,
+              formData?.monogamy === false && styles.toggleOptionSelected,
             ]}
             onPress={() => updateFormData('monogamy', false)}
           >
             <Text style={[
               styles.toggleOptionText,
-              !formData.monogamy && styles.toggleOptionTextSelected,
+              formData?.monogamy === false && styles.toggleOptionTextSelected,
             ]}>
               Polyamory
             </Text>
@@ -85,8 +113,9 @@ export default function Step2RelationshipGoals({
         <Text style={styles.inputLabel}>Children plans</Text>
         <OptionGrid
           options={CHILDREN_PLAN_OPTIONS}
-          selectedValues={formData.childrenPlan}
+          selectedValues={Array.isArray(formData?.childrenPlan) ? formData.childrenPlan : []}
           onSelectionChange={(value) => updateFormData('childrenPlan', value)}
+          multiSelect={true}
         />
       </View>
     </View>
@@ -135,5 +164,11 @@ const styles = StyleSheet.create({
   toggleOptionTextSelected: {
     color: colors.text.white,
     fontWeight: typography.weights.semibold,
+  },
+  errorText: {
+    ...typography.styles.caption,
+    color: colors.accent.error,
+    marginTop: spacing.xs,
+    marginLeft: spacing.xs,
   },
 });
