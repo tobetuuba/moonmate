@@ -28,6 +28,11 @@ const INITIAL_FORM_DATA: FormData = {
   customPronouns: '',
   seeking: [],
   customSeeking: '',
+  ageRange: {
+    min: 18,
+    max: 35,
+  },
+  maxDistance: 50,
 
   relationshipType: '',
   monogamy: true,
@@ -117,55 +122,56 @@ export function useCreateProfileForm() {
     }
   };
 
-  const onSubmit = async (data: FormData) => {
-    setIsSubmitting(true);
-
+  const onSubmit = async (data: CreateProfileFormData) => {
     try {
+      setIsSubmitting(true);
+      
       const user = auth.currentUser;
       if (!user) {
         throw new Error('User not authenticated');
       }
-
-      // Calculate age
+      
+      // Calculate age from birthDate
       const birthDate = new Date(data.birthDate);
       const today = new Date();
       const age = today.getFullYear() - birthDate.getFullYear();
       const monthDiff = today.getMonth() - birthDate.getMonth();
       const finalAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
 
-      const profileData: UserProfile = {
+      const payload = {
         id: user.uid,
         displayName: data.displayName,
-        age: finalAge,
         birthDate: data.birthDate,
         birthTime: data.birthTime,
         location: data.location,
         gender: data.gender,
-        seeking: data.seeking,
-        relationshipGoals: [data.relationshipType],
-        bio: data.bio,
-        photos: data.photos,
-        profilePhotoUrl: data.profilePhotoUrl,
-        interests: data.interests,
-        socialLinks: {},
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        // Add all the missing fields from the form
-        height: data.height,
-        profession: data.profession,
         pronouns: data.pronouns,
         customGender: data.customGender,
         customPronouns: data.customPronouns,
         customSeeking: data.customSeeking,
+        bio: data.bio,
+        photos: data.photos,
+        profilePhotoUrl: data.profilePhotoUrl,
+        interests: data.interests,
+        height: data.height,
+        profession: data.profession,
+        lifestyle: {
+          smoking: data.smoking,
+          drinking: data.drinking,
+          diet: data.diet,
+          exercise: data.exercise,
+        },
+        prompts: data.prompts,
+        customInterests: data.customInterests,
+        // preferences (the service will split & map)
+        seeking: data.seeking,
+        ageRange: data.ageRange,
+        maxDistance: data.maxDistance,
+        relationshipType: data.relationshipType,
         monogamy: data.monogamy,
         childrenPlan: data.childrenPlan,
         childrenPlanDetails: data.childrenPlanDetails,
-        prompts: data.prompts,
-        customInterests: data.customInterests,
-        smoking: data.smoking,
-        drinking: data.drinking,
-        diet: data.diet,
-        exercise: data.exercise,
+        // flags
         showOrientation: data.showOrientation,
         showGender: data.showGender,
         incognitoMode: data.incognitoMode,
@@ -173,7 +179,8 @@ export function useCreateProfileForm() {
         acceptPrivacy: data.acceptPrivacy,
       };
 
-      await ProfileService.createUserProfile(profileData);
+      // Use the new atomic writer instead of the old single-writer
+      await ProfileService.createUserProfileAndPrefs(payload);
       
       Alert.alert('Success!', 'Your profile has been created successfully!', [
         { text: 'OK', onPress: () => router.replace('/(tabs)') }

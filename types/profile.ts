@@ -24,6 +24,11 @@ export interface UserProfile {
   customPronouns?: string;
   seeking: string[]; // e.g. ["men", "women", "nonbinary"]
   customSeeking?: string;
+  ageRange?: {
+    min: number;
+    max: number;
+  };
+  maxDistance?: number;
   relationshipGoals?: string[]; // e.g. ["Long-term relationship", "Friendship"]
   monogamy?: boolean;
   childrenPlan?: string;
@@ -116,6 +121,11 @@ export interface BasicInfo {
   customPronouns?: string;
   seeking: string[];
   customSeeking?: string;
+  ageRange: {
+    min: number;
+    max: number;
+  };
+  maxDistance: number;
 }
 
 export interface RelationshipGoals {
@@ -179,6 +189,11 @@ export interface CreateProfileFormData {
   customPronouns?: string;
   seeking: string[];
   customSeeking?: string;
+  ageRange: {
+    min: number;
+    max: number;
+  };
+  maxDistance: number;
 
   // Step 2: Relationship Goals
   relationshipType: string;

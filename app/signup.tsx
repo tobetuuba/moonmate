@@ -9,12 +9,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Modal,
 } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import CountryPicker, { Country, CountryCode } from 'react-native-country-picker-modal';
 import { auth } from '../services/firebase';
 import { createUserWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
 import { colors } from '../theme/colors';
@@ -24,10 +24,23 @@ import { texts } from '../constants/texts';
 import Button from '../components/Button';
 import Card from '../components/Card';
 
+// Simple country codes for phone input
+const COUNTRY_CODES = [
+  { code: 'TR', dialCode: '+90', flag: '🇹🇷' },
+  { code: 'US', dialCode: '+1', flag: '🇺🇸' },
+  { code: 'GB', dialCode: '+44', flag: '🇬🇧' },
+  { code: 'DE', dialCode: '+49', flag: '🇩🇪' },
+  { code: 'FR', dialCode: '+33', flag: '🇫🇷' },
+  { code: 'IT', dialCode: '+39', flag: '🇮🇹' },
+  { code: 'ES', dialCode: '+34', flag: '🇪🇸' },
+  { code: 'NL', dialCode: '+31', flag: '🇳🇱' },
+  { code: 'CA', dialCode: '+1', flag: '🇨🇦' },
+  { code: 'AU', dialCode: '+61', flag: '🇦🇺' },
+];
+
 export default function SignUpScreen() {
   const [mode, setMode] = useState<'email' | 'phone'>('email');
-  const [countryCode, setCountryCode] = useState<CountryCode>('TR');
-  const [country, setCountry] = useState<Country | undefined>(undefined);
+  const [countryCode, setCountryCode] = useState('TR');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -36,6 +49,7 @@ export default function SignUpScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
 
   const phoneInputRef = useRef<TextInput>(null);
 
@@ -45,11 +59,15 @@ export default function SignUpScreen() {
     }
   }, [mode]);
 
-  const onSelect = (selectedCountry: Country) => {
-    setCountryCode(selectedCountry.cca2 as CountryCode);
-    setCountry(selectedCountry);
+  const onSelectCountry = (selectedCountry: string) => {
+    setCountryCode(selectedCountry);
     setPhone('');
     setError('');
+    setShowCountryPicker(false);
+  };
+
+  const getSelectedCountry = () => {
+    return COUNTRY_CODES.find(c => c.code === countryCode) || COUNTRY_CODES[0];
   };
 
   const validateEmail = (email: string) => {
@@ -269,25 +287,71 @@ export default function SignUpScreen() {
             // Phone Signup Form
             <View style={styles.form}>
               <View style={styles.phoneContainer}>
-                <CountryPicker
-                  countryCode={countryCode}
-                  withFilter
-                  withFlag
-                  withCallingCode
-                  withEmoji
-                  onSelect={onSelect}
-                  containerButtonStyle={styles.countryPickerButton}
-                />
+                <TouchableOpacity
+                  style={styles.countryCodeButton}
+                  onPress={() => setShowCountryPicker(true)}
+                >
+                  <Text style={styles.countryCodeText}>
+                    {getSelectedCountry().flag} {getSelectedCountry().dialCode}
+                  </Text>
+                  <Ionicons name="chevron-down" size={20} color={colors.text.tertiary} />
+                </TouchableOpacity>
                 <TextInput
                   ref={phoneInputRef}
                   style={styles.phoneInput}
-                  placeholder="Enter phone number"
+                  placeholder="Phone number"
                   placeholderTextColor={colors.text.tertiary}
                   value={phone}
                   onChangeText={setPhone}
                   keyboardType="phone-pad"
+                  autoComplete="tel"
                 />
               </View>
+
+                {/* Country Picker Modal */}
+                <Modal
+                  visible={showCountryPicker}
+                  transparent
+                  animationType="slide"
+                  onRequestClose={() => setShowCountryPicker(false)}
+                >
+                  <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                      <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Select Country</Text>
+                        <TouchableOpacity
+                          onPress={() => setShowCountryPicker(false)}
+                          style={styles.closeButton}
+                        >
+                          <Ionicons name="close" size={24} color={colors.text.primary} />
+                        </TouchableOpacity>
+                      </View>
+                      <ScrollView style={styles.countryList}>
+                        {COUNTRY_CODES.map((country) => (
+                          <TouchableOpacity
+                            key={country.code}
+                            style={[
+                              styles.countryItem,
+                              countryCode === country.code && styles.countryItemSelected,
+                            ]}
+                            onPress={() => onSelectCountry(country.code)}
+                          >
+                            <Text style={styles.countryFlag}>{country.flag}</Text>
+                            <Text style={[
+                              styles.countryText,
+                              countryCode === country.code && styles.countryTextSelected,
+                            ]}>
+                              {country.dialCode}
+                            </Text>
+                            {countryCode === country.code && (
+                              <Ionicons name="checkmark" size={20} color={colors.primary[500]} />
+                            )}
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  </View>
+                </Modal>
 
               <Button
                 title="Create Account"
@@ -419,9 +483,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.input.paddingHorizontal,
     paddingVertical: spacing.input.paddingVertical,
   },
-  countryPickerButton: {
-    backgroundColor: 'transparent',
-    paddingVertical: 0,
+  countryCodeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: spacing.button.borderRadius - 2,
+    backgroundColor: colors.primary[50],
+    marginRight: spacing.sm,
+  },
+  countryCodeText: {
+    ...typography.styles.buttonSmall,
+    color: colors.text.primary,
+    marginRight: spacing.xs,
   },
   phoneInput: {
     flex: 1,
@@ -446,5 +521,59 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     marginTop: spacing.sm,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    backgroundColor: colors.background.primary,
+    borderRadius: spacing.lg,
+    width: '80%',
+    maxHeight: '70%',
+    padding: spacing.md,
+    alignItems: 'center',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: spacing.md,
+  },
+  modalTitle: {
+    ...typography.styles.h2,
+    color: colors.text.primary,
+  },
+  closeButton: {
+    padding: spacing.xs,
+  },
+  countryList: {
+    width: '100%',
+  },
+  countryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  countryItemSelected: {
+    backgroundColor: colors.primary[100],
+  },
+  countryFlag: {
+    fontSize: 24,
+    marginRight: spacing.sm,
+  },
+  countryText: {
+    ...typography.styles.buttonSmall,
+    color: colors.text.primary,
+    flex: 1,
+  },
+  countryTextSelected: {
+    color: colors.primary[500],
   },
 });

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
@@ -20,12 +21,22 @@ interface LookingForEditModalProps {
     relationshipGoals?: string[];
     monogamy?: boolean;
     childrenPlan?: string;
+    ageRange?: {
+      min: number;
+      max: number;
+    };
+    maxDistance?: number;
   };
   onSave: (data: { 
     seeking?: string[]; 
     relationshipGoals?: string[]; 
     monogamy?: boolean; 
-    childrenPlan?: string; 
+    childrenPlan?: string;
+    ageRange?: {
+      min: number;
+      max: number;
+    };
+    maxDistance?: number;
   }) => void;
   onClose: () => void;
 }
@@ -84,6 +95,8 @@ export default function LookingForEditModal({
   const [relationshipGoals, setRelationshipGoals] = useState<string[]>(currentData.relationshipGoals || []);
   const [monogamy, setMonogamy] = useState<boolean | undefined>(currentData.monogamy);
   const [childrenPlan, setChildrenPlan] = useState<string>(currentData.childrenPlan || '');
+  const [ageRange, setAgeRange] = useState<{ min: number; max: number }>(currentData.ageRange || { min: 18, max: 35 });
+  const [maxDistance, setMaxDistance] = useState<number>(currentData.maxDistance || 50);
 
   const handleSave = () => {
     const updatedData = {
@@ -91,6 +104,8 @@ export default function LookingForEditModal({
       relationshipGoals: relationshipGoals.length > 0 ? relationshipGoals : undefined,
       monogamy: monogamy,
       childrenPlan: childrenPlan || undefined,
+      ageRange: ageRange,
+      maxDistance: maxDistance,
     };
     onSave(updatedData);
   };
@@ -101,6 +116,8 @@ export default function LookingForEditModal({
     setRelationshipGoals(currentData.relationshipGoals || []);
     setMonogamy(currentData.monogamy);
     setChildrenPlan(currentData.childrenPlan || '');
+    setAgeRange(currentData.ageRange || { min: 18, max: 35 });
+    setMaxDistance(currentData.maxDistance || 50);
     onClose();
   };
 
@@ -138,6 +155,65 @@ export default function LookingForEditModal({
               onSelectionChange={setSeeking}
               multiSelect={true}
             />
+          </View>
+
+          {/* Age Range */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Age range</Text>
+            <Text style={styles.sectionSubtitle}>What age range are you interested in?</Text>
+            <View style={styles.ageRangeContainer}>
+              <View style={styles.ageInputs}>
+                <TextInput
+                  style={styles.ageInput}
+                  value={ageRange.min.toString()}
+                  onChangeText={(text) => {
+                    const value = parseInt(text) || 18;
+                    const max = ageRange.max;
+                    if (value >= 18 && value <= max) {
+                      setAgeRange({ ...ageRange, min: value });
+                    }
+                  }}
+                  keyboardType="numeric"
+                  maxLength={2}
+                />
+                <Text style={styles.ageSeparator}>-</Text>
+                <TextInput
+                  style={styles.ageInput}
+                  value={ageRange.max.toString()}
+                                     onChangeText={(text) => {
+                     const value = parseInt(text) || 35;
+                     const min = ageRange.min;
+                     if (value >= min && value <= 60) {
+                       setAgeRange({ ...ageRange, max: value });
+                     }
+                   }}
+                   keyboardType="numeric"
+                   maxLength={2}
+                />
+                <Text style={styles.ageUnit}>years</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Distance */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Maximum distance</Text>
+            <Text style={styles.sectionSubtitle}>How far are you willing to look?</Text>
+            <View style={styles.distanceContainer}>
+              <TextInput
+                style={styles.distanceInput}
+                value={maxDistance.toString()}
+                onChangeText={(text) => {
+                  const value = parseInt(text) || 50;
+                  if (value >= 1 && value <= 200) {
+                    setMaxDistance(value);
+                  }
+                }}
+                keyboardType="numeric"
+                maxLength={3}
+              />
+              <Text style={styles.distanceUnit}>km</Text>
+            </View>
           </View>
 
           {/* Relationship Goals */}
@@ -227,5 +303,56 @@ const styles = StyleSheet.create({
     ...typography.styles.caption,
     color: colors.text.secondary,
     marginBottom: spacing.sm,
+  },
+  ageRangeContainer: {
+    marginTop: spacing.sm,
+  },
+  ageInputs: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ageInput: {
+    borderWidth: 1,
+    borderColor: colors.border.secondary,
+    borderRadius: spacing.input.borderRadius,
+    padding: spacing.input.paddingHorizontal,
+    backgroundColor: colors.background.secondary,
+    color: colors.text.primary,
+    textAlign: 'center',
+    width: 60,
+    ...typography.styles.input,
+  },
+  ageSeparator: {
+    ...typography.styles.body,
+    color: colors.text.secondary,
+    marginHorizontal: spacing.sm,
+  },
+  ageUnit: {
+    ...typography.styles.body,
+    color: colors.text.secondary,
+    marginLeft: spacing.sm,
+  },
+  distanceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.sm,
+  },
+  distanceInput: {
+    borderWidth: 1,
+    borderColor: colors.border.secondary,
+    borderRadius: spacing.input.borderRadius,
+    padding: spacing.input.paddingHorizontal,
+    backgroundColor: colors.background.secondary,
+    color: colors.text.primary,
+    textAlign: 'center',
+    width: 80,
+    ...typography.styles.input,
+  },
+  distanceUnit: {
+    ...typography.styles.body,
+    color: colors.text.secondary,
+    marginLeft: spacing.sm,
   },
 });

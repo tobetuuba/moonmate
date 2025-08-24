@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Modal,
 } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,7 +17,6 @@ import { Feather } from '@expo/vector-icons';
 import { Ionicons } from '@expo/vector-icons';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { signInWithEmailAndPassword, signInWithPhoneNumber } from 'firebase/auth';
-import CountryPicker, { Country, CountryCode } from 'react-native-country-picker-modal';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { auth } from '../services/firebase';
 import { colors } from '../theme/colors';
@@ -26,6 +26,20 @@ import { texts } from '../constants/texts';
 import Button from '../components/Button';
 import Card from '../components/Card';
 
+// Simple country codes for phone input
+const COUNTRY_CODES = [
+  { code: 'TR', dialCode: '+90', flag: '🇹🇷' },
+  { code: 'US', dialCode: '+1', flag: '🇺🇸' },
+  { code: 'GB', dialCode: '+44', flag: '🇬🇧' },
+  { code: 'DE', dialCode: '+49', flag: '🇩🇪' },
+  { code: 'FR', dialCode: '+33', flag: '🇫🇷' },
+  { code: 'IT', dialCode: '+39', flag: '🇮🇹' },
+  { code: 'ES', dialCode: '+34', flag: '🇪🇸' },
+  { code: 'NL', dialCode: '+31', flag: '🇳🇱' },
+  { code: 'CA', dialCode: '+1', flag: '🇨🇦' },
+  { code: 'AU', dialCode: '+61', flag: '🇦🇺' },
+];
+
 export default function LoginScreen() {
   const [mode, setMode] = useState<'email' | 'phone'>('email');
   const [email, setEmail] = useState('');
@@ -34,10 +48,9 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   // Phone login states
-  const [countryCode, setCountryCode] = useState<CountryCode>('TR');
-  const [country, setCountry] = useState<Country | undefined>(undefined);
-  const [withCountryNameButton] = useState(false);
+  const [countryCode, setCountryCode] = useState('TR');
   const [phone, setPhone] = useState('');
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
   const phoneInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
@@ -46,11 +59,15 @@ export default function LoginScreen() {
     }
   }, [mode]);
 
-  const onSelect = (selectedCountry: Country) => {
-    setCountryCode(selectedCountry.cca2 as CountryCode);
-    setCountry(selectedCountry);
+  const onSelectCountry = (selectedCountry: string) => {
+    setCountryCode(selectedCountry);
     setPhone('');
     setError('');
+    setShowCountryPicker(false);
+  };
+
+  const getSelectedCountry = () => {
+    return COUNTRY_CODES.find(c => c.code === countryCode) || COUNTRY_CODES[0];
   };
 
   const handlePhoneChange = (text: string) => {
@@ -60,20 +77,13 @@ export default function LoginScreen() {
   };
 
   const getFullNumber = () => {
-    const code = country?.callingCode?.[0] ? `+${country.callingCode[0]}` : '';
-    return code + phone;
+    const country = getSelectedCountry();
+    return country.dialCode + phone;
   };
 
   const validatePhoneNumber = () => {
-    if (!country) return false;
     const fullNumber = getFullNumber();
-    let parsed;
-    try {
-      parsed = parsePhoneNumberFromString(fullNumber, countryCode as any);
-    } catch {
-      return false;
-    }
-    return parsed?.isValid() || false;
+    return phone.length >= 10;
   };
 
   const handleEmailLogin = async () => {
@@ -253,16 +263,14 @@ export default function LoginScreen() {
             // Phone Login Form
             <View style={styles.form}>
               <View style={styles.phoneContainer}>
-                <CountryPicker
-                  countryCode={countryCode}
-                  withFilter
-                  withFlag
-                  withCallingCode
-                  withEmoji
-                  withCountryNameButton={withCountryNameButton}
-                  onSelect={onSelect}
-                  containerButtonStyle={styles.countryPickerButton}
-                />
+                <TouchableOpacity
+                  style={styles.countryCodeButton}
+                  onPress={() => setShowCountryPicker(true)}
+                >
+                  <Text style={styles.countryCodeText}>
+                    {getSelectedCountry().flag} {getSelectedCountry().dialCode}
+                  </Text>
+                </TouchableOpacity>
                 <TextInput
                   ref={phoneInputRef}
                   style={styles.phoneInput}
@@ -297,6 +305,36 @@ export default function LoginScreen() {
           />
         </Card>
       </ScrollView>
+
+      <Modal
+        visible={showCountryPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCountryPicker(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowCountryPicker(false)}
+        >
+          <View style={styles.countryPickerModal}>
+            <Text style={styles.modalTitle}>Select Country</Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {COUNTRY_CODES.map((country) => (
+                <TouchableOpacity
+                  key={country.code}
+                  style={styles.countryPickerItem}
+                  onPress={() => onSelectCountry(country.code)}
+                >
+                  <Text style={styles.countryPickerItemText}>
+                    {country.flag} {country.dialCode}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -411,9 +449,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.input.paddingHorizontal,
     paddingVertical: spacing.input.paddingVertical,
   },
-  countryPickerButton: {
-    backgroundColor: 'transparent',
-    paddingVertical: 0,
+  countryCodeButton: {
+    backgroundColor: colors.primary[100],
+    borderRadius: spacing.button.borderRadius,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginRight: spacing.sm,
+  },
+  countryCodeText: {
+    ...typography.styles.buttonSmall,
+    color: colors.text.primary,
   },
   phoneInput: {
     flex: 1,
@@ -438,5 +483,33 @@ const styles = StyleSheet.create({
   },
   signUpButton: {
     marginTop: spacing.sm,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  countryPickerModal: {
+    backgroundColor: colors.background.primary,
+    borderRadius: spacing.md,
+    width: '80%',
+    padding: spacing.lg,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    ...typography.styles.h2,
+    color: colors.text.primary,
+    marginBottom: spacing.md,
+  },
+  countryPickerItem: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    width: '100%',
+    alignItems: 'center',
+  },
+  countryPickerItemText: {
+    ...typography.styles.body,
+    color: colors.text.primary,
   },
 });

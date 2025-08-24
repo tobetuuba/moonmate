@@ -1,6 +1,35 @@
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { UserProfile } from '../../types/profile';
+
+// Add new types for preferences
+type MatchPrefs = {
+  seeking: string[];
+  ageRange: { min: number; max: number };
+  distanceKm: number;
+  intent: 'serious' | 'friendship' | 'fun' | 'unsure';
+  monogamy?: boolean;
+  childrenPlan?: 'yes' | 'no' | 'maybe' | 'already-have';
+  version?: number;
+  updatedAt?: any;
+};
+
+// Remove RelationshipPrefs type since we're merging it into MatchPrefs
+
+// Helper function to map relationship type to intent
+const mapRelationshipTypeToIntent = (t?: string): MatchPrefs['intent'] => {
+  switch (t) {
+    case 'serious':
+    case 'marriage':
+      return 'serious';
+    case 'friendship':
+      return 'friendship';
+    case 'fun':
+      return 'fun';
+    default:
+      return 'unsure';
+  }
+};
 
 export class ProfileService {
   private static COLLECTION = 'users';
@@ -205,5 +234,70 @@ export class ProfileService {
       });
       throw error;
     }
+  }
+
+  /**
+   * Create user profile and preferences atomically using Firestore batch
+   */
+  static async createUserProfileAndPrefs(data: any): Promise<void> {
+    console.log('🔥 ProfileService.createUserProfileAndPrefs called');
+    console.log('📝 Profile data:', JSON.stringify(data, null, 2));
+    
+    const uid = auth.currentUser?.uid;
+    if (!uid) {
+      console.error('❌ User not authenticated');
+      throw new Error('User not authenticated');
+    }
+
+    const {
+      // preferences to be split out:
+      seeking, ageRange, maxDistance,
+      relationshipType, monogamy, childrenPlan,
+      // everything else stays in the profile doc:
+      ...profileDoc
+    } = data;
+
+    const now = serverTimestamp();
+
+    // Root profile (users/{uid})
+    // TIP: do not store "age" if present; compute it from birthDate when reading.
+    const userRef = doc(db, 'users', uid);
+
+    // Match preferences (users/{uid}/preferences/match) - now includes relationship prefs
+    const matchRef = doc(db, 'users', uid, 'preferences', 'match');
+    const matchPrefs: MatchPrefs = {
+      seeking: seeking ?? [],
+      ageRange: ageRange ?? { min: 25, max: 35 },
+      distanceKm: typeof maxDistance === 'number' ? maxDistance : 50,
+      intent: mapRelationshipTypeToIntent(relationshipType),
+      monogamy,
+      childrenPlan,
+      version: 1,
+      updatedAt: now,
+    };
+
+    console.log('📊 Split data:', {
+      profileDoc,
+      matchPrefs,
+    });
+
+    const batch = writeBatch(db);
+
+    batch.set(
+      userRef,
+      {
+        ...profileDoc,
+        id: uid,
+        createdAt: (profileDoc as any)?.createdAt ?? now,
+        updatedAt: now,
+      },
+      { merge: true }
+    );
+
+    batch.set(matchRef, matchPrefs, { merge: true });
+
+    console.log('💾 Committing batch write...');
+    await batch.commit();
+    console.log('✅ Profile and match preferences created successfully in Firestore');
   }
 } 

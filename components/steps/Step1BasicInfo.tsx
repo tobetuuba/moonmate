@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import MultiSlider from 'react-native-multi-slider';
+import { Slider } from '@miblanchard/react-native-slider';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
@@ -81,12 +83,29 @@ export default function Step1BasicInfo({
   setFieldTouched,
 }: Step1BasicInfoProps) {
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [ageSliderWidth, setAgeSliderWidth] = useState(300);
+  const [scrollEnabled, setScrollEnabled] = useState(true);
+  
+  // Live (while sliding) UI values
+  const [localAge, setLocalAge] = useState<{ min: number; max: number } | null>(null);
+  const [localDistance, setLocalDistance] = useState<number | null>(null);
+  
   const nameInputRef = useRef<TextInput>(null);
 
   // Debug: Check seeking validation
   useEffect(() => {
     console.log('errors.seeking:', errors.seeking, 'touched.seeking:', touched.seeking);
   }, [errors.seeking, touched.seeking]);
+
+  // Initialize defaults if missing
+  useEffect(() => {
+    if (!formData.ageRange) {
+      updateFormData('ageRange', { min: 25, max: 35 });
+    }
+    if (typeof formData.maxDistance !== 'number') {
+      updateFormData('maxDistance', 50);
+    }
+  }, []);
 
   const handleDateConfirm = useCallback((date: Date) => {
     // Format date as YYYY-MM-DD in local timezone
@@ -96,8 +115,6 @@ export default function Step1BasicInfo({
     const formattedDate = `${year}-${month}-${day}`;
     updateFormData('birthDate', formattedDate);
   }, [updateFormData]);
-
-
 
   const getCurrentLocation = async () => {
     try {
@@ -142,6 +159,7 @@ export default function Step1BasicInfo({
       Alert.alert('Error', 'Failed to get your current location. Please try again.');
     }
   };
+
   return (
     <KeyboardAvoidingView 
       style={styles.flex}
@@ -152,6 +170,7 @@ export default function Step1BasicInfo({
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        scrollEnabled={scrollEnabled}
       >
         <Text style={styles.sectionTitle}>Personal Information</Text>
       
@@ -307,14 +326,32 @@ export default function Step1BasicInfo({
         />
       </View>
 
+      {/* Looking For Preferences */}
+      <Text style={styles.sectionTitle}>Looking For</Text>
+      
       {/* Seeking */}
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Looking for *</Text>
+        <Text style={styles.inputLabel}>Interested in *</Text>
+        <Text style={styles.inputSubtitle}>Select all that apply</Text>
         <OptionGrid
           options={SEEKING_OPTIONS}
           selectedValues={formData.seeking}
-          onSelectionChange={(value) => {
-            updateFormData('seeking', value);
+          onSelectionChange={(value: string | string[]) => {
+            const valueArray = Array.isArray(value) ? value : [value];
+            const singles = ['everyone', 'no-preference', 'no-answer'];
+            const hasSingle = valueArray.some(v => singles.includes(v));
+            let next = valueArray;
+
+            if (hasSingle) {
+              // Keep only the single exclusive choice (if multiple, keep the last tapped)
+              const lastSingle = [...valueArray].reverse().find(v => singles.includes(v))!;
+              next = [lastSingle];
+            } else {
+              // Remove any accidental singles if user selected regular genders
+              next = valueArray.filter(v => !singles.includes(v));
+            }
+
+            updateFormData('seeking', next);
             setFieldTouched?.('seeking', true);
           }}
           multiSelect={true}
@@ -326,6 +363,129 @@ export default function Step1BasicInfo({
         />
       </View>
 
+      {/* Age Range */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>Age range *</Text>
+        <Text style={styles.inputSubtitle}>What age range are you interested in?</Text>
+
+        <View
+          style={styles.sliderContainer}
+          onLayout={(e) => setAgeSliderWidth(e.nativeEvent.layout.width)}
+        >
+          <MultiSlider
+            values={[
+              (localAge?.min ?? formData.ageRange?.min) ?? 25,
+              (localAge?.max ?? formData.ageRange?.max) ?? 35,
+            ]}
+            min={18}
+            max={60}
+            step={1}
+            sliderLength={ageSliderWidth}
+            touchDimensions={{ width: 40, height: 40, borderRadius: 20, slipDisplacement: 40 }}
+            onValuesChangeStart={() => setScrollEnabled(false)}
+            onValuesChange={([minV, maxV]) => {
+              setLocalAge({ min: minV, max: maxV });        // live UI updates
+            }}
+            onValuesChangeFinish={([minV, maxV]) => {
+              setScrollEnabled(true);
+              setLocalAge(null);                             // commit & clear local
+              updateFormData('ageRange', { min: minV, max: maxV });
+            }}
+            containerStyle={{ paddingVertical: 8 }}
+            trackStyle={{ height: 4 }}
+            selectedStyle={{ backgroundColor: colors.primary[500] }}
+            unselectedStyle={{ backgroundColor: colors.border.secondary }}
+            markerStyle={{
+              width: 20, height: 20, borderRadius: 10,
+              borderWidth: 2, borderColor: colors.background.primary,
+              backgroundColor: colors.primary[500],
+            }}
+          />
+        </View>
+
+        {/* Numeric inputs below */}
+        <View style={styles.sliderInputs}>
+          <TextInput
+            style={styles.sliderInput}
+            value={(localAge?.min ?? formData.ageRange?.min ?? 25).toString()}
+            keyboardType="numeric"
+            maxLength={2}
+            onChangeText={(t) => {
+              const min = Math.max(18, Math.min(Number(t || 18), formData.ageRange?.max ?? 60));
+              updateFormData('ageRange', { min, max: formData.ageRange?.max ?? 35 });
+            }}
+          />
+          <Text style={styles.sliderSeparator}>-</Text>
+          <TextInput
+            style={styles.sliderInput}
+            value={(localAge?.max ?? formData.ageRange?.max ?? 35).toString()}
+            keyboardType="numeric"
+            maxLength={2}
+            onChangeText={(t) => {
+              const max = Math.min(60, Math.max(Number(t || 35), formData.ageRange?.min ?? 18));
+              updateFormData('ageRange', { min: formData.ageRange?.min ?? 25, max });
+            }}
+          />
+        </View>
+
+        <FormError error={errors.ageRange?.message} touched={touched.ageRange} />
+      </View>
+
+      {/* Distance */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>Maximum distance *</Text>
+        <Text style={styles.inputSubtitle}>How far are you willing to look?</Text>
+
+        <View style={[styles.sliderContainer, { paddingVertical: 8 }]}>
+          <Slider
+            value={(localDistance ?? formData.maxDistance) ?? 50}
+            minimumValue={1}
+            maximumValue={200}
+            step={1}
+            onSlidingStart={() => setScrollEnabled(false)}
+            onValueChange={(v) => {
+              const raw = Array.isArray(v) ? v[0] : v;
+              setLocalDistance(Math.round(raw as number));   // live UI
+            }}
+            onSlidingComplete={(v) => {
+              const raw = Array.isArray(v) ? v[0] : v;
+              setScrollEnabled(true);
+              setLocalDistance(null);                         // commit
+              updateFormData('maxDistance', Math.round(raw as number));
+            }}
+            minimumTrackTintColor={colors.primary[500]}
+            maximumTrackTintColor={colors.border.secondary}
+            thumbTintColor={colors.primary[500]}
+            thumbStyle={{
+              width: 20, height: 20, borderRadius: 10,
+              borderWidth: 2, borderColor: colors.background.primary,
+            }}
+            thumbTouchSize={{ width: 40, height: 40 }}
+            trackStyle={{ height: 4 }}
+          />
+        </View>
+
+        <View style={{ alignItems: 'center', marginTop: spacing.xs }}>
+          <Text style={styles.sliderLabel}>
+            {(localDistance ?? formData.maxDistance ?? 50)} km
+          </Text>
+        </View>
+
+        {/* Optional numeric input */}
+        <TextInput
+          style={styles.sliderInput}
+          value={(formData.maxDistance ?? 50).toString()}
+          keyboardType="numeric"
+          maxLength={3}
+          onChangeText={(t) => {
+            const v = Math.max(1, Math.min(Number(t || 50), 200));
+            updateFormData('maxDistance', v);
+          }}
+        />
+
+        <FormError error={errors.maxDistance?.message} touched={touched.maxDistance} />
+      </View>
+
       {/* Modals */}
       <DatePickerModal
         visible={showDatePicker}
@@ -334,7 +494,6 @@ export default function Step1BasicInfo({
         currentDate={formData.birthDate ? new Date(formData.birthDate) : new Date()}
         title="Select Birth Date"
       />
-
 
       </ScrollView>
     </KeyboardAvoidingView>
@@ -363,6 +522,11 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     marginBottom: spacing.sm,
     fontWeight: typography.weights.medium,
+  },
+  inputSubtitle: {
+    ...typography.styles.caption,
+    color: colors.text.secondary,
+    marginBottom: spacing.sm,
   },
   textInput: {
     borderWidth: 1,
@@ -411,5 +575,34 @@ const styles = StyleSheet.create({
     borderRadius: spacing.input.borderRadius,
     padding: spacing.sm,
     backgroundColor: colors.accent.error + '10',
+  },
+  sliderContainer: {
+    marginTop: spacing.sm,
+  },
+  sliderLabel: {
+    ...typography.styles.caption,
+    color: colors.text.secondary,
+  },
+  sliderInputs: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  sliderInput: {
+    borderWidth: 1,
+    borderColor: colors.border.secondary,
+    borderRadius: spacing.input.borderRadius,
+    padding: spacing.input.paddingHorizontal,
+    backgroundColor: colors.background.secondary,
+    color: colors.text.primary,
+    textAlign: 'center',
+    width: 60,
+    ...typography.styles.input,
+  },
+  sliderSeparator: {
+    ...typography.styles.body,
+    color: colors.text.secondary,
+    marginHorizontal: spacing.sm,
   },
 });

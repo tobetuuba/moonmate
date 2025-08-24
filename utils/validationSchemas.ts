@@ -38,6 +38,28 @@ export const step1Schema = yup.object({
     .of(yup.string())
     .min(1, 'Please select what you are looking for')
     .required('Please select what you are looking for'),
+  ageRange: yup.object({
+    min: yup
+      .number()
+      .min(18, 'Minimum age must be at least 18')
+      .max(100, 'Minimum age must be less than 100')
+      .required('Age range is required'),
+    max: yup
+      .number()
+      .min(18, 'Maximum age must be at least 18')
+      .max(100, 'Maximum age must be less than 100')
+      .required('Age range is required'),
+  }).test('age-range', 'Maximum age must be greater than minimum age', function(value) {
+    if (value?.min && value?.max) {
+      return value.max > value.min;
+    }
+    return true;
+  }),
+  maxDistance: yup
+    .number()
+    .min(1, 'Distance must be at least 1 km')
+    .max(100, 'Distance must be less than 100 km')
+    .required('Maximum distance is required'),
 });
 
 // Step 2: Relationship Goals validation

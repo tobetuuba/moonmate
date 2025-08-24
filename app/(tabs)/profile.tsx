@@ -294,7 +294,12 @@ export default function ProfileScreen() {
     seeking?: string[]; 
     relationshipGoals?: string[]; 
     monogamy?: boolean; 
-    childrenPlan?: string; 
+    childrenPlan?: string;
+    ageRange?: {
+      min: number;
+      max: number;
+    };
+    maxDistance?: number;
   }) => {
     if (!user?.uid) return;
 
@@ -446,16 +451,28 @@ export default function ProfileScreen() {
           onEditPress={() => setShowLookingForModal(true)}
         >
           <View style={styles.lookingForContainer}>
-            {userProfile.relationshipGoals && userProfile.relationshipGoals.length > 0 && (
-              <View style={styles.lookingForItem}>
-                <Ionicons name="heart" size={20} color={colors.primary[500]} />
-                <Text style={styles.lookingForText}>{userProfile.relationshipGoals.join(', ')}</Text>
-              </View>
-            )}
             {userProfile.seeking && userProfile.seeking.length > 0 && (
               <View style={styles.lookingForItem}>
                 <Ionicons name="people" size={20} color={colors.secondary[500]} />
                 <Text style={styles.lookingForText}>Interested in {userProfile.seeking.join(', ')}</Text>
+              </View>
+            )}
+            {userProfile.ageRange && (
+              <View style={styles.lookingForItem}>
+                <Ionicons name="calendar" size={20} color={colors.primary[500]} />
+                <Text style={styles.lookingForText}>Age range: {userProfile.ageRange.min}-{userProfile.ageRange.max} years</Text>
+              </View>
+            )}
+            {userProfile.maxDistance && (
+              <View style={styles.lookingForItem}>
+                <Ionicons name="location" size={20} color={colors.accent.info} />
+                <Text style={styles.lookingForText}>Within {userProfile.maxDistance} km</Text>
+              </View>
+            )}
+            {userProfile.relationshipGoals && userProfile.relationshipGoals.length > 0 && (
+              <View style={styles.lookingForItem}>
+                <Ionicons name="heart" size={20} color={colors.primary[500]} />
+                <Text style={styles.lookingForText}>{userProfile.relationshipGoals.join(', ')}</Text>
               </View>
             )}
             {userProfile.monogamy !== undefined && (
@@ -649,6 +666,8 @@ export default function ProfileScreen() {
           relationshipGoals: userProfile.relationshipGoals,
           monogamy: userProfile.monogamy,
           childrenPlan: userProfile.childrenPlan,
+          ageRange: userProfile.ageRange,
+          maxDistance: userProfile.maxDistance,
         }}
         onSave={handleLookingForSave}
         onClose={() => setShowLookingForModal(false)}
