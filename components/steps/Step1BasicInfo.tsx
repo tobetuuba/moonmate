@@ -8,43 +8,57 @@ import {
   TouchableOpacity,
   Modal,
   Alert,
+  Dimensions,
 } from 'react-native';
+import { Slider } from '@miblanchard/react-native-slider';
+import MultiSlider from '@ptomasroos/react-native-multi-slider';
+import * as Location from 'expo-location';
+import CityPickerModal from '../CityPickerModal';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacings';
-import { Slider } from '@miblanchard/react-native-slider';
 
-export default function Step1BasicInfo() {
-  const [formData, setFormData] = useState({
-    displayName: '',
-    birthDate: null as string | null,
-    birthTime: null as string | null,
-    location: null as { city: string; latitude: number; longitude: number } | null,
-    gender: [] as string[],
-    pronouns: [] as string[],
-    bio: '',
-    photos: [] as string[],
-    profilePhotoUrl: '',
-    interests: [] as string[],
+export default function Step1BasicInfo({
+  formData,
+  updateFormData,
+  updateNestedField,
+  errors,
+  touched,
+  setFieldTouched,
+}: {
+  formData: {
+    displayName: string;
+    birthDate: string | null;
+    birthTime: string | null;
+    location: { city: string; country: string; latitude: number; longitude: number } | null;
+    gender: string;
+    pronouns: string[];
+    bio: string;
+    photos: string[];
+    profilePhotoUrl: string;
+    interests: string[];
     lifestyle: {
-      smoking: null as string | null,
-      drinking: null as string | null,
-      diet: null as string | null,
-      exercise: null as string | null,
-    },
-    prompts: {} as Record<string, any>,
-    seeking: [] as string[],
-    ageRange: { min: 25, max: 35 } as { min: number; max: number },
-    maxDistance: 50,
-    relationshipType: null as string | null,
-    monogamy: null as string | null,
-    childrenPlan: null as string | null,
-    showOrientation: false,
-    showGender: false,
-    acceptTerms: false,
-    acceptPrivacy: false,
-  });
-
+      smoking: string | null;
+      drinking: string | null;
+      diet: string | null;
+      exercise: string | null;
+    };
+    prompts: Record<string, any>;
+    seeking: string[];
+    ageRange: { min: number; max: number };
+    maxDistance: number;
+    relationshipType: string | null;
+    monogamy: boolean | null;
+    childrenPlan: string | null;
+    showOrientation: boolean;
+    showGender: boolean;
+  };
+  updateFormData: (key: string, value: any) => void;
+  updateNestedField: (parentKey: string, childKey: string, value: any) => void;
+  errors: any;
+  touched: any;
+  setFieldTouched: (field: string, touched: boolean) => void;
+}) {
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [localDistance, setLocalDistance] = useState<number | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -64,22 +78,14 @@ export default function Step1BasicInfo() {
     minute: new Date().getMinutes().toString(),
   });
 
-  const updateFormData = (key: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [key]: value,
-    }));
-  };
+  // Location-related state
+  const [isLocating, setIsLocating] = useState(false);
+  const [showCityPicker, setShowCityPicker] = useState(false);
+  
+  // Age slider width state
+  const [ageSliderWidth, setAgeSliderWidth] = useState(0);
 
-  const updateNestedFormData = (parentKey: string, childKey: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [parentKey]: {
-        ...(prev[parentKey as keyof typeof prev] as any),
-        [childKey]: value,
-      },
-    }));
-  };
+
 
   const handleDateConfirm = () => {
     // Parse the input values
@@ -103,8 +109,18 @@ export default function Step1BasicInfo() {
       return;
     }
     
-    // Create the date and update
+    // Create the date and check age
     const newDate = new Date(year, month - 1, day);
+    const today = new Date();
+    const age = today.getFullYear() - newDate.getFullYear();
+    const monthDiff = today.getMonth() - newDate.getMonth();
+    const finalAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < newDate.getDate()) ? age - 1 : age;
+    
+    if (finalAge < 18) {
+      Alert.alert('Age Restriction', 'You must be at least 18 years old to use this app.');
+      return;
+    }
+    
     setTempDate(newDate);
     
     const yearStr = String(year);
@@ -112,6 +128,7 @@ export default function Step1BasicInfo() {
     const dayStr = String(day).padStart(2, '0');
     const formattedDate = `${yearStr}-${monthStr}-${dayStr}`;
     updateFormData('birthDate', formattedDate);
+    setFieldTouched('birthDate', true);
     setShowDatePicker(false);
   };
 
@@ -140,6 +157,7 @@ export default function Step1BasicInfo() {
     const minuteStr = String(minute).padStart(2, '0');
     const formattedTime = `${hourStr}:${minuteStr}`;
     updateFormData('birthTime', formattedTime);
+    setFieldTouched('birthTime', true);
     setShowTimePicker(false);
   };
 
@@ -206,6 +224,156 @@ export default function Step1BasicInfo() {
     }
   };
 
+  // Location functions
+  const requestLocationPermission = async (): Promise<boolean> => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    return status === 'granted';
+  };
+
+  const getCurrentLocation = async (): Promise<Location.LocationObject | null> => {
+    try {
+      // First try to get last known position
+      const lastKnown = await Location.getLastKnownPositionAsync({
+        maxAge: 60000, // 1 minute
+      });
+      
+      if (lastKnown) {
+        return lastKnown;
+      }
+      
+      // Fallback to current position with balanced accuracy
+      const current = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+        timeInterval: 10000, // 10 seconds
+        distanceInterval: 100, // 100 meters
+      });
+      
+      return current;
+    } catch (error) {
+      console.error('Error getting location:', error);
+      return null;
+    }
+  };
+
+  const reverseGeocode = async (latitude: number, longitude: number): Promise<{ city: string; region?: string; country?: string } | null> => {
+    try {
+      const results = await Location.reverseGeocodeAsync({
+        latitude,
+        longitude,
+      });
+      
+      if (results.length > 0) {
+        const result = results[0];
+        return {
+          city: result.city || result.region || 'Unknown City',
+          region: result.region || undefined,
+          country: result.country || undefined,
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error('Error reverse geocoding:', error);
+      return null;
+    }
+  };
+
+  const handleLocationPress = async () => {
+    if (isLocating) return;
+    
+    setIsLocating(true);
+    
+    try {
+      const hasPermission = await requestLocationPermission();
+      
+      if (!hasPermission) {
+        Alert.alert(
+          'Location Permission Denied',
+          'Please enable location access in your device settings or select a city manually.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Select Manually', onPress: () => setShowCityPicker(true) },
+          ]
+        );
+        return;
+      }
+      
+      const location = await getCurrentLocation();
+      
+      if (!location) {
+        Alert.alert(
+          'Location Error',
+          'Unable to get your current location. Please try again or select a city manually.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Select Manually', onPress: () => setShowCityPicker(true) },
+          ]
+        );
+        return;
+      }
+      
+      // Round coordinates to 3 decimal places (~100m precision)
+      const roundedLat = Math.round(location.coords.latitude * 1000) / 1000;
+      const roundedLng = Math.round(location.coords.longitude * 1000) / 1000;
+      
+      // Get city and country info
+      const locationInfo = await reverseGeocode(roundedLat, roundedLng);
+      
+      if (locationInfo) {
+        updateFormData('location', {
+          city: locationInfo.city,
+          country: locationInfo.country || 'Unknown',
+          latitude: roundedLat,
+          longitude: roundedLng,
+        });
+      } else {
+        // Fallback to coordinates if city not found
+        updateFormData('location', {
+          city: `Unknown City (${roundedLat.toFixed(3)}, ${roundedLng.toFixed(3)})`,
+          country: 'Unknown',
+          latitude: roundedLat,
+          longitude: roundedLng,
+        });
+      }
+      
+      setFieldTouched('location', true);
+      
+    } catch (error) {
+      console.error('Location error:', error);
+      Alert.alert(
+        'Location Error',
+        'An error occurred while getting your location. Please try again or select a city manually.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Select Manually', onPress: () => setShowCityPicker(true) },
+        ]
+      );
+    } finally {
+      setIsLocating(false);
+    }
+  };
+
+  const handleCitySelect = (city: string) => {
+    // For manual city selection, we'll use default coordinates
+    // In a real app, you might want to geocode the city name to get coordinates
+    updateFormData('location', {
+      city: city,
+      country: 'Unknown', // Default country for manual selection
+      latitude: 0, // Default coordinates
+      longitude: 0,
+    });
+    setFieldTouched('location', true);
+    setShowCityPicker(false);
+  };
+
+  const isLocationValid = (location: any): boolean => {
+    return location && 
+           location.city && 
+           location.city.trim() !== '' && 
+           location.country && 
+           location.country.trim() !== '' &&
+           (location.latitude !== 0 || location.longitude !== 0);
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Select birth date';
     const date = new Date(dateString);
@@ -237,25 +405,83 @@ export default function Step1BasicInfo() {
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Display Name *</Text>
           <TextInput
-            style={styles.textInput}
+            style={[
+              styles.textInput,
+              touched?.displayName && errors?.displayName && styles.inputError
+            ]}
             value={formData.displayName}
             onChangeText={(text) => updateFormData('displayName', text)}
+            onBlur={() => setFieldTouched('displayName', true)}
             placeholder="Enter your display name"
             placeholderTextColor={colors.text.tertiary}
           />
+          {touched?.displayName && errors?.displayName && (
+            <Text style={styles.errorText}>
+              {typeof errors.displayName === 'string' ? errors.displayName : 'This field is required'}
+            </Text>
+          )}
+        </View>
+
+        {/* Gender Selection */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Gender *</Text>
+          <Text style={styles.inputSubtitle}>
+            How do you identify?
+          </Text>
+          <View style={[
+            styles.optionsGrid,
+            touched?.gender && errors?.gender && styles.optionGridError
+          ]}>
+            {['woman', 'man', 'non-binary', 'other'].map((gender) => (
+              <TouchableOpacity
+                key={gender}
+                style={[
+                  styles.optionChip,
+                  formData.gender === gender && styles.optionChipSelected,
+                ]}
+                onPress={() => {
+                  updateFormData('gender', gender);
+                  setFieldTouched('gender', true);
+                }}
+              >
+                <Text style={[
+                  styles.optionChipText,
+                  formData.gender === gender && styles.optionChipTextSelected,
+                ]}>
+                  {gender.charAt(0).toUpperCase() + gender.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {touched?.gender && errors?.gender && (
+            <Text style={styles.errorText}>
+              {typeof errors.gender === 'string' ? errors.gender : 'Please select your gender'}
+            </Text>
+          )}
         </View>
 
         {/* Birth Date */}
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Birth Date *</Text>
           <TouchableOpacity 
-            style={styles.dateButton}
-            onPress={openDatePicker}
+            style={[
+              styles.dateButton,
+              touched?.birthDate && errors?.birthDate && styles.inputError
+            ]}
+            onPress={() => {
+              setFieldTouched('birthDate', true);
+              openDatePicker();
+            }}
           >
             <Text style={styles.dateButtonText}>
               {formatDate(formData.birthDate)}
             </Text>
           </TouchableOpacity>
+          {touched?.birthDate && errors?.birthDate && (
+            <Text style={styles.errorText}>
+              {typeof errors.birthDate === 'string' ? errors.birthDate : 'Please select your birth date'}
+            </Text>
+          )}
         </View>
 
         {/* Birth Time */}
@@ -280,21 +506,57 @@ export default function Step1BasicInfo() {
           <Text style={styles.inputSubtitle}>
             Your city and coordinates for location-based matching
           </Text>
-          <TouchableOpacity style={styles.locationButton}>
+          <TouchableOpacity 
+            style={[
+              styles.locationButton,
+              touched?.location && !isLocationValid(formData.location) && styles.inputError
+            ]}
+            onPress={() => {
+              setFieldTouched('location', true);
+              handleLocationPress();
+            }}
+            disabled={isLocating}
+          >
             <Text style={styles.locationButtonText}>
-              {formData.location ? `${formData.location.city}` : 'Select Location'}
+              {isLocating 
+                ? 'Locating...' 
+                : formData.location && isLocationValid(formData.location)
+                  ? `${formData.location.city}, ${formData.location.country} • ${formData.location.latitude.toFixed(3)}, ${formData.location.longitude.toFixed(3)}`
+                  : 'Select Location'
+              }
             </Text>
           </TouchableOpacity>
+          
+          {/* Manual city selection option */}
+          {!isLocating && (
+            <TouchableOpacity 
+              style={styles.manualLocationButton}
+              onPress={() => {
+                setFieldTouched('location', true);
+                setShowCityPicker(true);
+              }}
+            >
+              <Text style={styles.manualLocationButtonText}>
+                Or select city manually
+              </Text>
+            </TouchableOpacity>
+          )}
+          
+          {touched?.location && !isLocationValid(formData.location) && (
+            <Text style={styles.errorText}>
+              Please select a valid location
+            </Text>
+          )}
         </View>
 
         {/* Bio */}
         <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Bio *</Text>
+          <Text style={styles.inputLabel}>Bio</Text>
           <Text style={styles.inputSubtitle}>
-            Tell potential matches about yourself
+            Tell potential matches about yourself (optional)
           </Text>
           <TextInput
-            style={[styles.textInput, styles.bioInput]}
+            style={styles.textInput}
             value={formData.bio}
             onChangeText={(text) => updateFormData('bio', text)}
             placeholder="Share your story, interests, and what you're looking for..."
@@ -312,6 +574,47 @@ export default function Step1BasicInfo() {
             Who are you interested in meeting?
           </Text>
 
+          {/* Seeking Selection */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Seeking *</Text>
+            <Text style={styles.inputSubtitle}>
+              Select who you're interested in meeting
+            </Text>
+            <View style={[
+              styles.optionsGrid,
+              touched?.seeking && errors?.seeking && styles.optionGridError
+            ]}>
+              {['women', 'men', 'non-binary', 'everyone'].map((seeking) => (
+                <TouchableOpacity
+                  key={seeking}
+                  style={[
+                    styles.optionChip,
+                    formData.seeking.includes(seeking) && styles.optionChipSelected,
+                  ]}
+                  onPress={() => {
+                    const newSeeking = formData.seeking.includes(seeking)
+                      ? formData.seeking.filter((s: string) => s !== seeking)
+                      : [...formData.seeking, seeking];
+                    updateFormData('seeking', newSeeking);
+                    setFieldTouched('seeking', true);
+                  }}
+                >
+                  <Text style={[
+                    styles.optionChipText,
+                    formData.seeking.includes(seeking) && styles.optionChipTextSelected,
+                  ]}>
+                    {seeking.charAt(0).toUpperCase() + seeking.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {touched?.seeking && errors?.seeking && (
+              <Text style={styles.errorText}>
+                {typeof errors.seeking === 'string' ? errors.seeking : 'Please select who you are seeking'}
+              </Text>
+            )}
+          </View>
+
           {/* Age Range Slider */}
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Age Range</Text>
@@ -319,73 +622,74 @@ export default function Step1BasicInfo() {
               Select your preferred age range for matches
             </Text>
             
-            {/* Custom Range Slider */}
-            <View style={styles.rangeSliderContainer}>
-              <View style={styles.rangeSliderTrack}>
-                <View 
-                  style={[
-                    styles.rangeSliderFill,
-                    {
-                      left: `${((formData.ageRange?.min ?? 25) - 18) / 42 * 100}%`,
-                      width: `${((formData.ageRange?.max ?? 35) - (formData.ageRange?.min ?? 25)) / 42 * 100}%`,
-                    }
-                  ]} 
-                />
-                <TouchableOpacity
-                  style={[
-                    styles.rangeSliderThumb,
-                    { left: `${((formData.ageRange?.min ?? 25) - 18) / 42 * 100}%` }
-                  ]}
-                  onPressIn={() => setScrollEnabled(false)}
-                  onPressOut={() => setScrollEnabled(true)}
-                />
-                <TouchableOpacity
-                  style={[
-                    styles.rangeSliderThumb,
-                    { left: `${((formData.ageRange?.max ?? 35) - 18) / 42 * 100}%` }
-                  ]}
-                  onPressIn={() => setScrollEnabled(false)}
-                  onPressOut={() => setScrollEnabled(true)}
+            {/* Working Age Range Slider */}
+            <View style={styles.ageSliderContainer}>
+              <View 
+                style={styles.ageSliderWrapper}
+                onLayout={(e) => setAgeSliderWidth(e.nativeEvent.layout.width)}
+              >
+                <MultiSlider
+                  values={[formData.ageRange?.min ?? 25, formData.ageRange?.max ?? 35]}
+                  min={18}
+                  max={60}
+                  step={1}
+                  sliderLength={ageSliderWidth}
+                  allowOverlap={false}
+                  minMarkerOverlapDistance={8}
+                  onValuesChangeStart={() => setScrollEnabled(false)}
+                  onValuesChange={(values) => {
+                    const [min, max] = values;
+                    updateFormData('ageRange', { min, max });
+                  }}
+                  onValuesChangeFinish={() => setScrollEnabled(true)}
+                  containerStyle={{ 
+                    width: '100%', 
+                    paddingHorizontal: 0, 
+                    marginHorizontal: 0 
+                  }}
+                  trackStyle={{ height: 4 }}
+                  selectedStyle={{ backgroundColor: colors.primary[500] }}
+                  unselectedStyle={{ backgroundColor: colors.border.secondary }}
+                  markerStyle={{ 
+                    width: 20, 
+                    height: 20, 
+                    borderRadius: 10, 
+                    borderWidth: 2, 
+                    borderColor: colors.background.primary,
+                    backgroundColor: colors.primary[500] 
+                  }}
+                  pressedMarkerStyle={{ 
+                    width: 24, 
+                    height: 24, 
+                    borderRadius: 12,
+                    backgroundColor: colors.primary[600]
+                  }}
                 />
               </View>
-              <View style={styles.rangeSliderLabels}>
-                <Text style={styles.rangeSliderLabel}>18</Text>
-                <Text style={styles.rangeSliderLabel}>60</Text>
+              
+              {/* Age range labels positioned at slider ends */}
+              <View style={styles.ageSliderLabels}>
+                <Text style={styles.ageSliderLabel}>18</Text>
+                <Text style={styles.ageSliderLabel}>60</Text>
               </View>
             </View>
             
             <View style={styles.rangeInputs}>
               <View style={styles.rangeInputContainer}>
                 <Text style={styles.rangeInputLabel}>Min Age</Text>
-                <TextInput
-                  style={styles.rangeInput}
-                  value={formData.ageRange?.min?.toString() || '25'}
-                  onChangeText={(text) => {
-                    const min = parseInt(text) || 18;
-                    const max = formData.ageRange?.max || 35;
-                    if (min >= 18 && min <= max) {
-                      updateFormData('ageRange', { min, max });
-                    }
-                  }}
-                  keyboardType="numeric"
-                  maxLength={2}
-                />
+                <View style={styles.ageValueBox}>
+                  <Text style={styles.ageValueText}>
+                    {formData.ageRange?.min || 18}
+                  </Text>
+                </View>
               </View>
               <View style={styles.rangeInputContainer}>
                 <Text style={styles.rangeInputLabel}>Max Age</Text>
-                <TextInput
-                  style={styles.rangeInput}
-                  value={formData.ageRange?.max?.toString() || '35'}
-                  onChangeText={(text) => {
-                    const max = parseInt(text) || 35;
-                    const min = formData.ageRange?.min || 25;
-                    if (max <= 60 && max >= min) {
-                      updateFormData('ageRange', { min, max });
-                    }
-                  }}
-                  keyboardType="numeric"
-                  maxLength={2}
-                />
+                <View style={styles.ageValueBox}>
+                  <Text style={styles.ageValueText}>
+                    {formData.ageRange?.max || 35}
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
@@ -404,15 +708,15 @@ export default function Step1BasicInfo() {
               step={1}
               animationType="spring"
               onSlidingStart={() => setScrollEnabled(false)}
-              onValueChange={(v) => {
+              onValueChange={(v: number | number[]) => {
                 const raw = Array.isArray(v) ? v[0] : v;
-                setLocalDistance(Math.round(raw as number));
+                setLocalDistance(Math.round(raw));
               }}
-              onSlidingComplete={(v) => {
+              onSlidingComplete={(v: number | number[]) => {
                 const raw = Array.isArray(v) ? v[0] : v;
                 setScrollEnabled(true);
                 setLocalDistance(null);
-                updateFormData('maxDistance', Math.round(raw as number));
+                updateFormData('maxDistance', Math.round(raw));
               }}
               minimumTrackTintColor={colors.primary[500]}
               maximumTrackTintColor={colors.border.secondary}
@@ -427,50 +731,6 @@ export default function Step1BasicInfo() {
                 {(localDistance ?? formData.maxDistance ?? 50)} km
               </Text>
             </View>
-          </View>
-        </View>
-
-        {/* Terms and Privacy */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Terms and Privacy</Text>
-          <Text style={styles.inputSubtitle}>
-            Please read and accept our terms and privacy policy
-          </Text>
-
-          {/* Accept Terms */}
-          <View style={styles.inputContainer}>
-            <TouchableOpacity
-              style={[
-                styles.checkboxButton,
-                formData.acceptTerms && styles.checkboxButtonActive
-              ]}
-              onPress={() => updateFormData('acceptTerms', !formData.acceptTerms)}
-            >
-              <Text style={[
-                styles.checkboxButtonText,
-                formData.acceptTerms && styles.checkboxButtonTextActive
-              ]}>
-                {formData.acceptTerms ? '✓' : ''} I accept the Terms of Service
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Accept Privacy */}
-          <View style={styles.inputContainer}>
-            <TouchableOpacity
-              style={[
-                styles.checkboxButton,
-                formData.acceptPrivacy && styles.checkboxButtonActive
-              ]}
-              onPress={() => updateFormData('acceptPrivacy', !formData.acceptPrivacy)}
-            >
-              <Text style={[
-                styles.checkboxButtonText,
-                formData.acceptPrivacy && styles.checkboxButtonTextActive
-              ]}>
-                {formData.acceptPrivacy ? '✓' : ''} I accept the Privacy Policy
-              </Text>
-            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -603,6 +863,15 @@ export default function Step1BasicInfo() {
           </View>
         </View>
       </Modal>
+
+      {/* City Picker Modal */}
+      <CityPickerModal
+        visible={showCityPicker}
+        onClose={() => setShowCityPicker(false)}
+        onConfirm={handleCitySelect}
+        currentCity={formData.location?.city || ''}
+        title="Select City"
+      />
     </ScrollView>
   );
 }
@@ -670,6 +939,15 @@ const styles = StyleSheet.create({
     ...typography.styles.input,
     color: colors.text.primary,
   },
+  manualLocationButton: {
+    marginTop: spacing.sm,
+    alignSelf: 'center',
+  },
+  manualLocationButtonText: {
+    ...typography.styles.caption,
+    color: colors.primary[500],
+    textDecorationLine: 'underline',
+  },
   toggleButton: {
     borderWidth: 1,
     borderColor: colors.border.secondary,
@@ -688,24 +966,6 @@ const styles = StyleSheet.create({
   toggleButtonTextActive: {
     color: colors.primary[500],
   },
-  checkboxButton: {
-    borderWidth: 1,
-    borderColor: colors.border.secondary,
-    borderRadius: spacing.input.borderRadius,
-    padding: spacing.input.paddingHorizontal,
-    backgroundColor: colors.background.secondary,
-  },
-  checkboxButtonActive: {
-    borderColor: colors.primary[500],
-    backgroundColor: colors.primary[50],
-  },
-  checkboxButtonText: {
-    ...typography.styles.input,
-    color: colors.text.primary,
-  },
-  checkboxButtonTextActive: {
-    color: colors.primary[500],
-  },
   optionGridContainer: {
     width: '100%',
     borderWidth: 1,
@@ -719,6 +979,13 @@ const styles = StyleSheet.create({
     borderRadius: spacing.input.borderRadius,
     padding: spacing.sm,
     backgroundColor: colors.accent.error + '10',
+  },
+  optionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-around',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   },
   sliderContainer: {
     marginTop: spacing.sm,
@@ -749,44 +1016,25 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     marginHorizontal: spacing.sm,
   },
-  rangeSliderContainer: {
+  ageSliderContainer: {
     marginTop: spacing.sm,
-    position: 'relative',
-    height: 40,
+    width: '100%',
+    alignSelf: 'stretch',
+    marginHorizontal: 0,
+    paddingHorizontal: 0,
   },
-  rangeSliderTrack: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 4,
-    backgroundColor: colors.border.secondary,
-    borderRadius: 2,
+  ageSliderWrapper: {
+    width: '100%',
+    alignSelf: 'stretch',
   },
-  rangeSliderFill: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    height: 4,
-    backgroundColor: colors.primary[500],
-    borderRadius: 2,
-  },
-  rangeSliderThumb: {
-    position: 'absolute',
-    top: -8,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: colors.primary[500],
-    borderWidth: 2,
-    borderColor: colors.background.primary,
-  },
-  rangeSliderLabels: {
+  ageSliderLabels: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: spacing.sm,
+    width: '100%',
+    marginTop: spacing.xs,
+    alignSelf: 'stretch',
   },
-  rangeSliderLabel: {
+  ageSliderLabel: {
     ...typography.styles.caption,
     color: colors.text.secondary,
   },
@@ -803,15 +1051,18 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     marginBottom: spacing.xs,
   },
-  rangeInput: {
+  ageValueBox: {
     borderWidth: 1,
     borderColor: colors.border.secondary,
     borderRadius: spacing.input.borderRadius,
     padding: spacing.input.paddingHorizontal,
     backgroundColor: colors.background.secondary,
-    color: colors.text.primary,
-    textAlign: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ageValueText: {
     ...typography.styles.input,
+    color: colors.text.primary,
   },
   distanceLabel: {
     alignItems: 'center',
@@ -900,5 +1151,34 @@ const styles = StyleSheet.create({
   },
   modalButtonTextConfirm: {
     color: colors.background.primary,
+  },
+  optionChip: {
+    borderWidth: 1,
+    borderColor: colors.border.secondary,
+    borderRadius: spacing.input.borderRadius,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    backgroundColor: colors.background.secondary,
+  },
+  optionChipSelected: {
+    borderColor: colors.primary[500],
+    backgroundColor: colors.primary[50],
+  },
+  optionChipText: {
+    ...typography.styles.input,
+    color: colors.text.primary,
+  },
+  optionChipTextSelected: {
+    color: colors.primary[500],
+  },
+  inputError: {
+    borderColor: colors.accent.error,
+    borderWidth: 1,
+  },
+  errorText: {
+    color: colors.accent.error,
+    fontSize: 12,
+    marginTop: spacing.xs,
+    textAlign: 'center',
   },
 });

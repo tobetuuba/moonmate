@@ -110,7 +110,7 @@ export function useCreateProfileForm() {
       case 2:
         return ['relationshipType']; // Only relationshipType is required
       case 3:
-        return ['bio']; // Only bio is required, prompts are optional
+        return []; // Bio is now optional
       case 4:
         return []; // Interests are optional
       case 5:

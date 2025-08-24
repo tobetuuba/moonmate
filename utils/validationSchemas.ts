@@ -79,8 +79,8 @@ export const step2Schema = yup.object({
 export const step3Schema = yup.object({
   bio: yup
     .string()
-    .required('Bio is required')
-    .min(10, 'Bio must be at least 10 characters')
+    .optional()
+    .min(10, 'Bio must be at least 10 characters if provided')
     .max(500, 'Bio must be less than 500 characters'),
   prompts: yup
     .object()
