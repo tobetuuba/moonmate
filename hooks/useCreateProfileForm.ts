@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -23,21 +23,18 @@ const INITIAL_FORM_DATA: FormData = {
   },
   profession: '',
   gender: '',
-  customGender: '',
   pronouns: '',
-  customPronouns: '',
-  seeking: [],
-  customSeeking: '',
-  ageRange: {
-    min: 18,
-    max: 35,
-  },
-  maxDistance: 50,
 
-  relationshipType: [],
-  monogamy: true,
-  childrenPlan: [],
-  childrenPlanDetails: '',
+  preferences: {
+    match: {
+      seeking: [],
+      ageRange: { min: 18, max: 35 },
+      distanceKm: 50,
+      childrenPlan: [],
+      intent: [],
+      monogamy: false,
+    },
+  },
 
   bio: '',
   prompts: {
@@ -49,7 +46,7 @@ const INITIAL_FORM_DATA: FormData = {
   },
 
   interests: [],
-  customInterests: [],
+
   smoking: '',
   drinking: '',
   diet: '',
@@ -76,45 +73,112 @@ export function useCreateProfileForm() {
     formState: { errors, isValid },
     trigger,
     getValues,
+    register,
+    setError,
   } = useForm<FormData>({
     resolver: yupResolver(completeFormSchema as any),
-    defaultValues: INITIAL_FORM_DATA,
+    defaultValues: {
+      ...INITIAL_FORM_DATA,
+      // Ensure preferences.match has all required fields
+      preferences: {
+        match: {
+          seeking: [],
+          ageRange: { min: 18, max: 35 },
+          distanceKm: 50,
+          childrenPlan: [],
+          intent: [],
+        },
+      },
+    },
     mode: 'onChange',
     reValidateMode: 'onChange',
+    criteriaMode: 'all',
+    shouldFocusError: false,
   });
+
+
+
+  // Register nested fields for proper RHF state management
+  useEffect(() => {
+    // match preferences
+    register('preferences.match.seeking' as const);
+    register('preferences.match.ageRange.min' as const);
+    register('preferences.match.ageRange.max' as const);
+    register('preferences.match.distanceKm' as const);
+    register('preferences.match.intent' as const);
+  }, [register]);
 
   const formData = watch();
   
   // Debug: Log formData changes
-  console.log('🔍 useCreateProfileForm - formData:', formData);
-  console.log('🔍 useCreateProfileForm - relationshipType:', formData?.relationshipType);
-  console.log('🔍 useCreateProfileForm - childrenPlan:', formData?.childrenPlan);
+  console.log('🔍 useCreateProfileForm - formData:', JSON.stringify(formData, null, 2));
+  console.log('🔍 useCreateProfileForm - intent:', JSON.stringify(formData?.preferences?.match?.intent, null, 2));
+  console.log('🔍 useCreateProfileForm - childrenPlan:', JSON.stringify(formData?.preferences?.match?.childrenPlan, null, 2));
+  
+  // Debug: Log nested preferences fields
+  console.log('🔍 preferences.match.seeking:', JSON.stringify(getValues('preferences.match.seeking')));
+  console.log('🔍 preferences.match.ageRange:', JSON.stringify(getValues('preferences.match.ageRange')));
+  console.log('🔍 preferences.match.distanceKm:', JSON.stringify(getValues('preferences.match.distanceKm')));
+  
+  // Additional debug for seeking
+  const seekingValue = getValues('preferences.match.seeking');
+  console.log('🔍 seekingValue type:', typeof seekingValue, Array.isArray(seekingValue));
+  console.log('🔍 seekingValue length:', seekingValue?.length);
+  console.log('🔍 seekingValue content:', JSON.stringify(seekingValue, null, 2));
+  
+  // Sanity logs for all nested fields
+  console.log('seeking =', JSON.stringify(getValues('preferences.match.seeking'), null, 2));
+  console.log('ageRange =', JSON.stringify(getValues('preferences.match.ageRange'), null, 2));
+  console.log('distanceKm =', JSON.stringify(getValues('preferences.match.distanceKm'), null, 2));
 
   const updateFormData = (field: keyof FormData, value: any) => {
-    console.log('🔍 updateFormData called with:', field, value);
+    console.log('🔍 updateFormData called with:', field, JSON.stringify(value, null, 2));
     setValue(field, value, { shouldValidate: true });
   };
 
-  const updateNestedField = (parentField: keyof FormData, childField: string, value: any) => {
-    const currentValue = getValues(parentField) as any;
-    setValue(parentField, {
-      ...currentValue,
-      [childField]: value,
-    }, { shouldValidate: true });
+  const updateNestedField = (parentField: keyof FormData | string, childField: string, value: any) => {
+    const path = childField ? `${parentField}.${childField}` : String(parentField);
+    console.log('🔍 updateNestedField ->', path, JSON.stringify(value, null, 2));
+    setValue(path as any, value, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
   };
 
-  const validateCurrentStep = async (step: number): Promise<boolean> => {
+  // Sugar functions for common nested field updates
+  const setSeeking = (vals: string[]) =>
+    setValue('preferences.match.seeking', vals, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
+  
+  const setAgeRange = (ageRange: { min: number; max: number }) =>
+    setValue('preferences.match.ageRange', ageRange, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
+  
+  const setDistanceKm = (distance: number) =>
+    setValue('preferences.match.distanceKm', distance, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
+
+  const validateCurrentStep = async (step: number, onStep2Error?: (hasError: boolean) => void): Promise<boolean> => {
     const stepFields = getStepFields(step);
+    console.log('🔍 validateCurrentStep - step:', step, 'stepFields:', stepFields);
+    
+    if (step === 1) {
+      // Step 1: Only validate seeking field, ignore intent and monogamy
+      const seeking = getValues('preferences.match.seeking');
+      if (!seeking || seeking.length === 0) {
+        console.log('❌ Step 1 validation failed: seeking is required');
+        return false;
+      }
+      console.log('✅ Step 1 validation passed');
+      return true;
+    }
+    
     const result = await trigger(stepFields);
+    console.log('🔍 validateCurrentStep - trigger result:', result);
+    
     return result;
   };
 
   const getStepFields = (step: number): (keyof FormData)[] => {
     switch (step) {
       case 1:
-        return ['displayName', 'birthDate', 'location', 'gender', 'seeking'];
+        return ['displayName', 'birthDate', 'location', 'gender', 'preferences'];
       case 2:
-        return ['relationshipType']; // Only relationshipType is required
+        return ['preferences'];
       case 3:
         return []; // Bio is now optional
       case 4:
@@ -127,6 +191,14 @@ export function useCreateProfileForm() {
         return [];
     }
   };
+
+  // Normalize seeking values to handle legacy data
+  const normalizeSeeking = (arr: string[] = []) => arr.map(v => {
+    if (v === 'men') return 'man';
+    if (v === 'women') return 'woman';
+    if (v === 'non-binary') return 'nonbinary';
+    return v;
+  });
 
   const onSubmit = async (data: CreateProfileFormData) => {
     try {
@@ -145,6 +217,7 @@ export function useCreateProfileForm() {
       const finalAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
 
       const payload = {
+        // Profile data (users/{uid})
         id: user.uid,
         displayName: data.displayName,
         birthDate: data.birthDate,
@@ -152,9 +225,6 @@ export function useCreateProfileForm() {
         location: data.location,
         gender: data.gender,
         pronouns: data.pronouns,
-        customGender: data.customGender,
-        customPronouns: data.customPronouns,
-        customSeeking: data.customSeeking,
         bio: data.bio,
         photos: data.photos,
         profilePhotoUrl: data.profilePhotoUrl,
@@ -168,21 +238,25 @@ export function useCreateProfileForm() {
           exercise: data.exercise,
         },
         prompts: data.prompts,
-        customInterests: data.customInterests,
-        // preferences (the service will split & map)
-        seeking: data.seeking,
-        ageRange: data.ageRange,
-        maxDistance: data.maxDistance,
-        relationshipType: data.relationshipType,
-        monogamy: data.monogamy,
-        childrenPlan: data.childrenPlan,
-        childrenPlanDetails: data.childrenPlanDetails,
-        // flags
+        
+        // Privacy flags
         showOrientation: data.showOrientation,
         showGender: data.showGender,
         incognitoMode: data.incognitoMode,
         acceptTerms: data.acceptTerms,
         acceptPrivacy: data.acceptPrivacy,
+
+        // Match preferences (users/{uid}/preferences/match)
+        preferences: {
+          match: {
+            seeking: normalizeSeeking(data.preferences.match.seeking),
+            ageRange: data.preferences.match.ageRange,
+            distanceKm: data.preferences.match.distanceKm,
+            intent: data.preferences.match.intent,
+            monogamy: data.preferences.match.monogamy,
+            childrenPlan: data.preferences.match.childrenPlan,
+          }
+        }
       };
 
       // Use the new atomic writer instead of the old single-writer
@@ -234,6 +308,10 @@ export function useCreateProfileForm() {
     formData,
     updateFormData,
     updateNestedField,
+    setValue,
+    setSeeking,
+    setAgeRange,
+    setDistanceKm,
     validateCurrentStep,
     handleSubmit,
     isSubmitting,
@@ -241,7 +319,7 @@ export function useCreateProfileForm() {
     control,
     setFieldTouched: (field: string, touched: boolean) => {
       // This is a simple implementation - you might want to enhance it
-      console.log('🔍 setFieldTouched called with:', field, touched);
+      console.log('🔍 setFieldTouched called with:', field, JSON.stringify(touched, null, 2));
     },
   };
 }

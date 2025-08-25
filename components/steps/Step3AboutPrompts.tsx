@@ -69,7 +69,10 @@ export default function Step3AboutPrompts({
 
       {/* Bio */}
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Tell us about yourself *</Text>
+        <Text style={styles.inputLabel}>Tell us about yourself</Text>
+        <Text style={styles.inputSubtitle}>
+          Optional: Share your story, interests, and what you're looking for
+        </Text>
         <TextInput
           ref={bioInputRef}
           style={[
@@ -79,7 +82,7 @@ export default function Step3AboutPrompts({
           ]}
           value={formData.bio}
           onChangeText={useCallback((text: string) => updateFormData('bio', text), [updateFormData])}
-          placeholder="Tell us about yourself... (10-500 characters)"
+          placeholder="Tell us about yourself... (optional)"
           multiline
           numberOfLines={4}
           maxLength={500}
@@ -153,6 +156,11 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     marginBottom: spacing.sm,
     fontWeight: typography.weights.medium,
+  },
+  inputSubtitle: {
+    ...typography.styles.caption,
+    color: colors.text.secondary,
+    marginBottom: spacing.sm,
   },
   textInput: {
     borderWidth: 1,

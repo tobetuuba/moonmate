@@ -17,11 +17,16 @@ import CityPickerModal from '../CityPickerModal';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacings';
+import { SEEKING_OPTIONS } from '../../constants/seeking';
 
 export default function Step1BasicInfo({
   formData,
   updateFormData,
   updateNestedField,
+  setValue,
+  setSeeking,
+  setAgeRange,
+  setDistanceKm,
   errors,
   touched,
   setFieldTouched,
@@ -30,10 +35,11 @@ export default function Step1BasicInfo({
     displayName: string;
     birthDate: string | null;
     birthTime: string | null;
+    height?: number;
+    profession?: string;
     location: { city: string; country: string; latitude: number; longitude: number } | null;
     gender: string;
-    pronouns: string[];
-    bio: string;
+    pronouns: string;
     photos: string[];
     profilePhotoUrl: string;
     interests: string[];
@@ -44,17 +50,23 @@ export default function Step1BasicInfo({
       exercise: string | null;
     };
     prompts: Record<string, any>;
-    seeking: string[];
-    ageRange: { min: number; max: number };
-    maxDistance: number;
-    relationshipType: string | null;
+    preferences: {
+      match: {
+        seeking: string[];
+        ageRange: { min: number; max: number };
+        distanceKm: number;
+      };
+    };
     monogamy: boolean | null;
-    childrenPlan: string | null;
     showOrientation: boolean;
     showGender: boolean;
   };
   updateFormData: (key: string, value: any) => void;
   updateNestedField: (parentKey: string, childKey: string, value: any) => void;
+  setValue: (field: string, value: any, options?: any) => void;
+  setSeeking: (vals: string[]) => void;
+  setAgeRange: (ageRange: { min: number; max: number }) => void;
+  setDistanceKm: (distance: number) => void;
   errors: any;
   touched: any;
   setFieldTouched: (field: string, touched: boolean) => void;
@@ -84,6 +96,50 @@ export default function Step1BasicInfo({
   
   // Age slider width state
   const [ageSliderWidth, setAgeSliderWidth] = useState(0);
+
+  // Helper function to check if a nested field has errors
+  const hasNestedError = (fieldPath: string) => {
+    const parts = fieldPath.split('.');
+    let cur: any = errors;
+
+    // flat fallback
+    if (errors?.[fieldPath]) cur = errors[fieldPath];
+
+    // nested walk (override flat if exists)
+    else {
+      for (const p of parts) {
+        if (!cur || typeof cur !== 'object' || !(p in cur)) {
+          cur = null;
+          break;
+        }
+        cur = cur[p];
+      }
+    }
+
+    if (!cur) return false;
+    if (typeof cur === 'string') return true;
+    if (typeof cur === 'object') {
+      if (cur.message) return true;
+      if (cur.type) return true;
+      if (cur.types && Object.keys(cur.types).length) return true;
+    }
+    return false;
+  };
+
+  // Helper function to check if a nested field has been touched
+  const hasNestedTouched = (fieldPath: string) => {
+    // 1) flat fallback
+    if (touched?.[fieldPath]) return true;
+
+    // 2) nested check
+    const parts = fieldPath.split('.');
+    let cur = touched;
+    for (const p of parts) {
+      if (!cur || typeof cur !== 'object' || !(p in cur)) return false;
+      cur = cur[p];
+    }
+    return !!cur;
+  };
 
 
 
@@ -460,6 +516,37 @@ export default function Step1BasicInfo({
           )}
         </View>
 
+        {/* Pronouns Selection */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Pronouns</Text>
+          <Text style={styles.inputSubtitle}>
+            Optional: How would you like to be referred to?
+          </Text>
+          <View style={styles.optionsGrid}>
+            {['she/her', 'he/him', 'they/them', 'she/they', 'he/they', 'any/all'].map((pronoun) => (
+              <TouchableOpacity
+                key={pronoun}
+                style={[
+                  styles.optionChip,
+                  formData.pronouns === pronoun && styles.optionChipSelected,
+                ]}
+                onPress={() => {
+                  updateFormData('pronouns', pronoun);
+                }}
+              >
+                <Text style={[
+                  styles.optionChipText,
+                  formData.pronouns === pronoun && styles.optionChipTextSelected,
+                ]}>
+                  {pronoun}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          
+
+        </View>
+
         {/* Birth Date */}
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Birth Date *</Text>
@@ -498,6 +585,44 @@ export default function Step1BasicInfo({
               {formatTime(formData.birthTime)}
             </Text>
           </TouchableOpacity>
+        </View>
+
+        {/* Height */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Height</Text>
+          <Text style={styles.inputSubtitle}>
+            Optional: Your height in centimeters
+          </Text>
+          <TextInput
+            style={styles.textInput}
+            value={formData.height ? formData.height.toString() : ''}
+            onChangeText={(text) => {
+              const height = parseInt(text);
+              if (isNaN(height) || height <= 0) {
+                updateFormData('height', undefined);
+              } else {
+                updateFormData('height', height);
+              }
+            }}
+            placeholder="e.g., 170"
+            placeholderTextColor={colors.text.tertiary}
+            keyboardType="numeric"
+          />
+        </View>
+
+        {/* Profession */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Profession</Text>
+          <Text style={styles.inputSubtitle}>
+            Optional: What do you do for work?
+          </Text>
+          <TextInput
+            style={styles.textInput}
+            value={formData.profession || ''}
+            onChangeText={(text) => updateFormData('profession', text)}
+            placeholder="e.g., Software Engineer, Teacher, Artist"
+            placeholderTextColor={colors.text.tertiary}
+          />
         </View>
 
         {/* Location */}
@@ -549,23 +674,7 @@ export default function Step1BasicInfo({
           )}
         </View>
 
-        {/* Bio */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Bio</Text>
-          <Text style={styles.inputSubtitle}>
-            Tell potential matches about yourself (optional)
-          </Text>
-          <TextInput
-            style={styles.textInput}
-            value={formData.bio}
-            onChangeText={(text) => updateFormData('bio', text)}
-            placeholder="Share your story, interests, and what you're looking for..."
-            placeholderTextColor={colors.text.tertiary}
-            multiline={true}
-            numberOfLines={4}
-            textAlignVertical="top"
-          />
-        </View>
+
 
         {/* Looking For Preferences */}
         <View style={styles.inputGroup}>
@@ -582,35 +691,31 @@ export default function Step1BasicInfo({
             </Text>
             <View style={[
               styles.optionsGrid,
-              touched?.seeking && errors?.seeking && styles.optionGridError
+              hasNestedTouched('preferences.match.seeking') && hasNestedError('preferences.match.seeking') && styles.optionGridError
             ]}>
-              {['women', 'men', 'non-binary', 'everyone'].map((seeking) => (
-                <TouchableOpacity
-                  key={seeking}
-                  style={[
-                    styles.optionChip,
-                    formData.seeking.includes(seeking) && styles.optionChipSelected,
-                  ]}
-                  onPress={() => {
-                    const newSeeking = formData.seeking.includes(seeking)
-                      ? formData.seeking.filter((s: string) => s !== seeking)
-                      : [...formData.seeking, seeking];
-                    updateFormData('seeking', newSeeking);
-                    setFieldTouched('seeking', true);
-                  }}
-                >
-                  <Text style={[
-                    styles.optionChipText,
-                    formData.seeking.includes(seeking) && styles.optionChipTextSelected,
-                  ]}>
-                    {seeking.charAt(0).toUpperCase() + seeking.slice(1)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                            {SEEKING_OPTIONS.map(opt => {
+                const selected = formData.preferences?.match?.seeking?.includes(opt.value);
+                return (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[styles.optionChip, selected && styles.optionChipSelected]}
+                    onPress={() => {
+                      const cur = formData.preferences?.match?.seeking || [];
+                      const next = selected ? cur.filter(v => v !== opt.value) : [...cur, opt.value];
+                      setSeeking(next);
+                      setFieldTouched('preferences.match.seeking', true);
+                    }}
+                  >
+                    <Text style={[styles.optionChipText, selected && styles.optionChipTextSelected]}>
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-            {touched?.seeking && errors?.seeking && (
+            {hasNestedTouched('preferences.match.seeking') && hasNestedError('preferences.match.seeking') && (
               <Text style={styles.errorText}>
-                {typeof errors.seeking === 'string' ? errors.seeking : 'Please select who you are seeking'}
+                Please select who you are seeking
               </Text>
             )}
           </View>
@@ -629,7 +734,7 @@ export default function Step1BasicInfo({
                 onLayout={(e) => setAgeSliderWidth(e.nativeEvent.layout.width)}
               >
                 <MultiSlider
-                  values={[formData.ageRange?.min ?? 25, formData.ageRange?.max ?? 35]}
+                  values={[formData.preferences?.match?.ageRange?.min ?? 25, formData.preferences?.match?.ageRange?.max ?? 35]}
                   min={18}
                   max={60}
                   step={1}
@@ -639,7 +744,7 @@ export default function Step1BasicInfo({
                   onValuesChangeStart={() => setScrollEnabled(false)}
                   onValuesChange={(values) => {
                     const [min, max] = values;
-                    updateFormData('ageRange', { min, max });
+                    setAgeRange({ min, max });
                   }}
                   onValuesChangeFinish={() => setScrollEnabled(true)}
                   containerStyle={{ 
@@ -679,7 +784,7 @@ export default function Step1BasicInfo({
                 <Text style={styles.rangeInputLabel}>Min Age</Text>
                 <View style={styles.ageValueBox}>
                   <Text style={styles.ageValueText}>
-                    {formData.ageRange?.min || 18}
+                    {formData.preferences?.match?.ageRange?.min || 18}
                   </Text>
                 </View>
               </View>
@@ -687,7 +792,7 @@ export default function Step1BasicInfo({
                 <Text style={styles.rangeInputLabel}>Max Age</Text>
                 <View style={styles.ageValueBox}>
                   <Text style={styles.ageValueText}>
-                    {formData.ageRange?.max || 35}
+                    {formData.preferences?.match?.ageRange?.max || 35}
                   </Text>
                 </View>
               </View>
@@ -701,8 +806,8 @@ export default function Step1BasicInfo({
               How far are you willing to travel for a match?
             </Text>
             
-            <Slider
-              value={(localDistance ?? formData.maxDistance) ?? 50}
+                        <Slider
+              value={(localDistance ?? formData.preferences?.match?.distanceKm) ?? 50}
               minimumValue={1}
               maximumValue={200}
               step={1}
@@ -716,7 +821,7 @@ export default function Step1BasicInfo({
                 const raw = Array.isArray(v) ? v[0] : v;
                 setScrollEnabled(true);
                 setLocalDistance(null);
-                updateFormData('maxDistance', Math.round(raw));
+                setDistanceKm(Math.round(raw));
               }}
               minimumTrackTintColor={colors.primary[500]}
               maximumTrackTintColor={colors.border.secondary}
@@ -727,9 +832,9 @@ export default function Step1BasicInfo({
             />
             
             <View style={styles.distanceLabel}>
-              <Text style={styles.distanceValue}>
-                {(localDistance ?? formData.maxDistance ?? 50)} km
-              </Text>
+                          <Text style={styles.distanceValue}>
+              {(localDistance ?? formData.preferences?.match?.distanceKm ?? 50)} km
+            </Text>
             </View>
           </View>
         </View>
@@ -921,10 +1026,7 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     ...typography.styles.input,
   },
-  bioInput: {
-    minHeight: 80,
-    paddingTop: spacing.input.paddingVertical,
-  },
+
   inputContainer: {
     marginTop: spacing.sm,
   },

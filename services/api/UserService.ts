@@ -63,7 +63,7 @@ export class UserService {
 
   static async updateLocation(lat: number, lng: number): Promise<void> {
     // Implementation would update user's location
-    console.log('Updating location:', { lat, lng });
+    console.log('Updating location:', JSON.stringify({ lat, lng }, null, 2));
     return Promise.resolve();
   }
 

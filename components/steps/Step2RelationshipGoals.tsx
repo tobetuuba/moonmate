@@ -3,7 +3,6 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacings';
-import OptionGrid from '../OptionGrid';
 
 // Relationship type options
 const RELATIONSHIP_TYPE_OPTIONS = [
@@ -26,22 +25,77 @@ import { RelationshipGoals } from '../../types/profile';
 interface Step2RelationshipGoalsProps {
   formData: RelationshipGoals;
   updateFormData: (field: keyof RelationshipGoals, value: any) => void;
+  updateNestedField: (parentField: string, childField: string, value: any) => void;
   errors?: any;
   touched?: any;
   setFieldTouched?: (field: string, touched: boolean) => void;
+  onValidationError?: (field: string, hasError: boolean) => void;
 }
 
 export default function Step2RelationshipGoals({
   formData,
   updateFormData,
+  updateNestedField,
   errors,
   touched,
   setFieldTouched,
+  onValidationError,
 }: Step2RelationshipGoalsProps) {
+  
+  // Helper function to check if a nested field has errors (same as Step1BasicInfo)
+  const hasNestedError = (fieldPath: string) => {
+    const parts = fieldPath.split('.');
+    let cur: any = errors;
+
+    // flat fallback
+    if (errors?.[fieldPath]) cur = errors[fieldPath];
+
+    // nested walk (override flat if exists)
+    else {
+      for (const p of parts) {
+        if (!cur || typeof cur !== 'object' || !(p in cur)) {
+          cur = null;
+          break;
+        }
+        cur = cur[p];
+      }
+    }
+
+    if (!cur) return false;
+    if (typeof cur === 'string') return true;
+    if (typeof cur === 'object') {
+      if (cur.message) return true;
+      if (cur.type) return true;
+      if (cur.types && Object.keys(cur.types).length) return true;
+    }
+    return false;
+  };
+
+  // Helper function to check if a nested field has been touched (same as Step1BasicInfo)
+  const hasNestedTouched = (fieldPath: string) => {
+    // 1) flat fallback
+    if (touched?.[fieldPath]) return true;
+
+    // 2) nested check
+    const parts = fieldPath.split('.');
+    let cur = touched;
+    for (const p of parts) {
+      if (!cur || typeof cur !== 'object' || !(p in cur)) return false;
+      cur = cur[p];
+    }
+    return !!cur;
+  };
+  
   // Debug: Check if formData is undefined
-  console.log('🔍 Step2RelationshipGoals - formData:', formData);
-  console.log('🔍 Step2RelationshipGoals - relationshipType:', formData?.relationshipType);
-  console.log('🔍 Step2RelationshipGoals - childrenPlan:', formData?.childrenPlan);
+  console.log('🔍 Step2RelationshipGoals - formData:', JSON.stringify(formData, null, 2));
+  console.log('🔍 Step2RelationshipGoals - intent:', JSON.stringify(formData?.preferences?.match?.intent, null, 2));
+  console.log('🔍 Step2RelationshipGoals - childrenPlan:', JSON.stringify(formData?.preferences?.match?.childrenPlan, null, 2));
+  
+  // Debug: Check validation state
+  console.log('🔍 Step2RelationshipGoals - errors:', JSON.stringify(errors, null, 2));
+  console.log('🔍 Step2RelationshipGoals - touched:', JSON.stringify(touched, null, 2));
+  console.log('🔍 Step2RelationshipGoals - hasNestedError(intent):', hasNestedError('preferences.match.intent'));
+  console.log('🔍 Step2RelationshipGoals - hasNestedTouched(intent):', hasNestedTouched('preferences.match.intent'));
   
   // Safety check
   if (!formData) {
@@ -56,37 +110,58 @@ export default function Step2RelationshipGoals({
       {/* Relationship Type */}
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>What type of relationship are you looking for? *</Text>
-        <OptionGrid
-          options={RELATIONSHIP_TYPE_OPTIONS}
-          selectedValues={Array.isArray(formData?.relationshipType) ? formData.relationshipType : []}
-          onSelectionChange={(value) => {
-            updateFormData('relationshipType', value);
-            setFieldTouched?.('relationshipType', true);
-          }}
-          multiSelect={true}
-          hasError={touched?.relationshipType && errors?.relationshipType}
-        />
-        {touched?.relationshipType && errors?.relationshipType && (
+        <View style={[
+          styles.optionsGrid,
+          hasNestedTouched('preferences.match.intent') && hasNestedError('preferences.match.intent') && styles.optionGridError
+        ]}>
+          {RELATIONSHIP_TYPE_OPTIONS.map(opt => {
+            const selected = formData.preferences?.match?.intent?.includes(opt.value);
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                style={[styles.optionChip, selected && styles.optionChipSelected]}
+                onPress={() => {
+                  const cur = formData.preferences?.match?.intent || [];
+                  const next = selected ? cur.filter(v => v !== opt.value) : [...cur, opt.value];
+                  updateNestedField('preferences.match', 'intent', next);
+                  setFieldTouched?.('preferences.match.intent', true);
+                }}
+              >
+                <Text style={[styles.optionChipText, selected && styles.optionChipTextSelected]}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {hasNestedTouched('preferences.match.intent') && hasNestedError('preferences.match.intent') && (
           <Text style={styles.errorText}>
-            {typeof errors.relationshipType === 'string' ? errors.relationshipType : 'Please select at least one relationship type'}
+            Please select at least one relationship type
           </Text>
         )}
       </View>
 
       {/* Monogamy Toggle */}
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Relationship Preference</Text>
-        <View style={styles.toggleContainer}>
+        <Text style={styles.inputLabel}>Relationship Preference *</Text>
+        <View style={[
+          styles.toggleContainer,
+          hasNestedTouched('preferences.match.monogamy') && hasNestedError('preferences.match.monogamy') && styles.optionGridError
+        ]}>
           <TouchableOpacity
             style={[
               styles.toggleOption,
-              formData?.monogamy === true && styles.toggleOptionSelected,
+              formData?.preferences?.match?.monogamy === true && styles.toggleOptionSelected,
             ]}
-            onPress={() => updateFormData('monogamy', true)}
+            onPress={() => {
+              updateNestedField('preferences.match', 'monogamy', true);
+              setFieldTouched?.('preferences.match.monogamy', true);
+            }}
           >
             <Text style={[
               styles.toggleOptionText,
-              formData?.monogamy === true && styles.toggleOptionTextSelected,
+              formData?.preferences?.match?.monogamy === true && styles.toggleOptionTextSelected,
             ]}>
               Monogamy
             </Text>
@@ -94,29 +169,51 @@ export default function Step2RelationshipGoals({
           <TouchableOpacity
             style={[
               styles.toggleOption,
-              formData?.monogamy === false && styles.toggleOptionSelected,
+              formData?.preferences?.match?.monogamy === false && styles.toggleOptionSelected,
             ]}
-            onPress={() => updateFormData('monogamy', false)}
+            onPress={() => {
+              updateNestedField('preferences.match', 'monogamy', false);
+              setFieldTouched?.('preferences.match.monogamy', true);
+            }}
           >
             <Text style={[
               styles.toggleOptionText,
-              formData?.monogamy === false && styles.toggleOptionTextSelected,
+              formData?.preferences?.match?.monogamy === false && styles.toggleOptionTextSelected,
             ]}>
               Polyamory
             </Text>
           </TouchableOpacity>
         </View>
+        {hasNestedTouched('preferences.match.monogamy') && hasNestedError('preferences.match.monogamy') && (
+          <Text style={styles.errorText}>
+            Please select your relationship preference
+          </Text>
+        )}
       </View>
 
       {/* Children Plan */}
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Children plans</Text>
-        <OptionGrid
-          options={CHILDREN_PLAN_OPTIONS}
-          selectedValues={Array.isArray(formData?.childrenPlan) ? formData.childrenPlan : []}
-          onSelectionChange={(value) => updateFormData('childrenPlan', value)}
-          multiSelect={true}
-        />
+        <View style={styles.optionsGrid}>
+          {CHILDREN_PLAN_OPTIONS.map(opt => {
+            const selected = formData.preferences?.match?.childrenPlan?.includes(opt.value);
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                style={[styles.optionChip, selected && styles.optionChipSelected]}
+                onPress={() => {
+                  const cur = formData.preferences?.match?.childrenPlan || [];
+                  const next = selected ? cur.filter(v => v !== opt.value) : [...cur, opt.value];
+                  updateNestedField('preferences.match', 'childrenPlan', next);
+                }}
+              >
+                <Text style={[styles.optionChipText, selected && styles.optionChipTextSelected]}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
     </View>
   );
@@ -170,5 +267,40 @@ const styles = StyleSheet.create({
     color: colors.accent.error,
     marginTop: spacing.xs,
     marginLeft: spacing.xs,
+  },
+  optionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  optionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: spacing.button.borderRadius,
+    borderWidth: 1,
+    borderColor: colors.border.secondary,
+    backgroundColor: colors.background.secondary,
+    gap: spacing.xs,
+  },
+  optionChipSelected: {
+    backgroundColor: colors.primary[500],
+    borderColor: colors.primary[500],
+  },
+  optionChipText: {
+    ...typography.styles.body,
+    color: colors.text.primary,
+  },
+  optionChipTextSelected: {
+    color: colors.text.white,
+    fontWeight: typography.weights.semibold,
+  },
+  optionGridError: {
+    borderWidth: 2,
+    borderColor: colors.accent.error,
+    borderRadius: spacing.input.borderRadius,
+    padding: spacing.sm,
+    backgroundColor: colors.accent.error + '10',
   },
 });

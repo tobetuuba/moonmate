@@ -133,7 +133,7 @@ export default function ProfileScreen() {
           console.log('💼 Profession:', profile.profession);
           console.log('💬 Pronouns:', profile.pronouns);
           console.log('❤️ Seeking:', profile.seeking);
-          console.log('🍃 Lifestyle:', { smoking: profile.smoking, drinking: profile.drinking, diet: profile.diet, exercise: profile.exercise });
+          console.log('🍃 Lifestyle:', JSON.stringify({ smoking: profile.smoking, drinking: profile.drinking, diet: profile.diet, exercise: profile.exercise }, null, 2));
           console.log('💭 Prompts:', profile.prompts);
           setUserProfile(profile);
         } else {

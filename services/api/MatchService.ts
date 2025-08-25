@@ -88,7 +88,7 @@ export class MatchService {
 
   static async sendMessage(matchId: string, content: string): Promise<Message> {
     // Implementation would send message via API
-    console.log('Sending message:', { matchId, content });
+    console.log('Sending message:', JSON.stringify({ matchId, content }, null, 2));
     
     // Mock response
     const message: Message = {
@@ -118,7 +118,7 @@ export class MatchService {
 
   static async reportUser(userId: string, reason: string): Promise<void> {
     // Implementation would report user
-    console.log('Reporting user:', { userId, reason });
+    console.log('Reporting user:', JSON.stringify({ userId, reason }, null, 2));
     return Promise.resolve();
   }
 }

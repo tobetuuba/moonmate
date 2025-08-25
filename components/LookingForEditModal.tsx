@@ -19,7 +19,7 @@ interface LookingForEditModalProps {
   currentData: {
     seeking?: string[];
     relationshipGoals?: string[];
-    monogamy?: boolean;
+    monogamy?: string;
     childrenPlan?: string;
     ageRange?: {
       min: number;
@@ -30,7 +30,7 @@ interface LookingForEditModalProps {
   onSave: (data: { 
     seeking?: string[]; 
     relationshipGoals?: string[]; 
-    monogamy?: boolean; 
+    monogamy?: string; 
     childrenPlan?: string;
     ageRange?: {
       min: number;
@@ -72,8 +72,8 @@ const RELATIONSHIP_GOALS = [
 ];
 
 const MONOGAMY_OPTIONS = [
-  { label: 'Monogamous', value: true },
-  { label: 'Open to non-monogamy', value: false },
+  { label: 'Monogamous', value: 'monogamous' },
+  { label: 'Open to non-monogamy', value: 'non-monogamous' },
 ];
 
 const CHILDREN_OPTIONS = [
@@ -93,7 +93,7 @@ export default function LookingForEditModal({
 }: LookingForEditModalProps) {
   const [seeking, setSeeking] = useState<string[]>(currentData.seeking || []);
   const [relationshipGoals, setRelationshipGoals] = useState<string[]>(currentData.relationshipGoals || []);
-  const [monogamy, setMonogamy] = useState<boolean | undefined>(currentData.monogamy);
+  const [monogamy, setMonogamy] = useState<string | undefined>(currentData.monogamy ? 'monogamous' : 'non-monogamous');
   const [childrenPlan, setChildrenPlan] = useState<string>(currentData.childrenPlan || '');
   const [ageRange, setAgeRange] = useState<{ min: number; max: number }>(currentData.ageRange || { min: 18, max: 35 });
   const [maxDistance, setMaxDistance] = useState<number>(currentData.maxDistance || 50);
@@ -114,7 +114,7 @@ export default function LookingForEditModal({
     // Reset to current data
     setSeeking(currentData.seeking || []);
     setRelationshipGoals(currentData.relationshipGoals || []);
-    setMonogamy(currentData.monogamy);
+    setMonogamy(currentData.monogamy ? 'monogamous' : 'non-monogamous');
     setChildrenPlan(currentData.childrenPlan || '');
     setAgeRange(currentData.ageRange || { min: 18, max: 35 });
     setMaxDistance(currentData.maxDistance || 50);
@@ -152,7 +152,7 @@ export default function LookingForEditModal({
             <OptionGrid
               options={SEEKING_OPTIONS}
               selectedValues={seeking}
-              onSelectionChange={setSeeking}
+              onSelectionChange={(value: string | string[]) => setSeeking(Array.isArray(value) ? value : [value])}
               multiSelect={true}
             />
           </View>
@@ -223,7 +223,7 @@ export default function LookingForEditModal({
             <OptionGrid
               options={RELATIONSHIP_GOALS}
               selectedValues={relationshipGoals}
-              onSelectionChange={setRelationshipGoals}
+              onSelectionChange={(value: string | string[]) => setRelationshipGoals(Array.isArray(value) ? value : [value])}
               multiSelect={true}
             />
           </View>
@@ -233,7 +233,7 @@ export default function LookingForEditModal({
             <Text style={styles.sectionTitle}>Relationship style</Text>
             <OptionGrid
               options={MONOGAMY_OPTIONS}
-              selectedValues={monogamy}
+              selectedValues={monogamy || ''}
               onSelectionChange={handleMonogamyChange}
               multiSelect={false}
             />
@@ -245,7 +245,7 @@ export default function LookingForEditModal({
             <OptionGrid
               options={CHILDREN_OPTIONS}
               selectedValues={childrenPlan}
-              onSelectionChange={setChildrenPlan}
+              onSelectionChange={(value: string | string[]) => setChildrenPlan(Array.isArray(value) ? value[0] : value)}
               multiSelect={false}
             />
           </View>
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     ...typography.styles.button,
-    color: colors.primary.contrast,
+    color: colors.text.white,
   },
   content: {
     flex: 1,

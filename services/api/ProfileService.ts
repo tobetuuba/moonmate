@@ -7,26 +7,14 @@ type MatchPrefs = {
   seeking: string[];
   ageRange: { min: number; max: number };
   distanceKm: number;
-  intent: 'serious' | 'friendship' | 'fun' | 'unsure';
-  monogamy?: boolean;
-  childrenPlan?: 'yes' | 'no' | 'maybe' | 'already-have';
+  intent: string[];  // Changed to array to match Firestore structure
+  monogamy: boolean;
+  childrenPlan: string[];  // Changed to array to match Firestore structure
   version?: number;
   updatedAt?: any;
 };
 
 // Remove RelationshipPrefs type since we're merging it into MatchPrefs
-
-// Helper function to map relationship type array to intent
-const mapRelationshipTypeToIntent = (types?: string[]): MatchPrefs['intent'] => {
-  if (!types || types.length === 0) return 'unsure';
-  
-  // If multiple types are selected, prioritize in this order
-  if (types.includes('serious') || types.includes('marriage')) return 'serious';
-  if (types.includes('fun')) return 'fun';
-  if (types.includes('friendship')) return 'friendship';
-  
-  return 'unsure';
-};
 
 export class ProfileService {
   private static COLLECTION = 'users';
@@ -37,17 +25,36 @@ export class ProfileService {
   static async getUserProfile(userId: string): Promise<UserProfile | null> {
     try {
       const userDoc = doc(db, this.COLLECTION, userId);
-      const docSnap = await getDoc(userDoc);
+      const userDocSnap = await getDoc(userDoc);
 
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        console.log('📄 Firestore data:', data);
-        console.log('📝 Bio from Firestore:', data.bio);
+      if (userDocSnap.exists()) {
+        const userData = userDocSnap.data();
+        console.log('📄 Firestore user data:', userData);
+        
+        // Also fetch match preferences from users/{uid}/preferences/match
+        const matchPrefsDoc = doc(db, this.COLLECTION, userId, 'preferences', 'match');
+        const matchPrefsSnap = await getDoc(matchPrefsDoc);
+        
+        let matchPrefs = null;
+        if (matchPrefsSnap.exists()) {
+          matchPrefs = matchPrefsSnap.data();
+          console.log('📊 Firestore match preferences:', matchPrefs);
+        } else {
+          console.log('📊 No match preferences found, using defaults');
+          matchPrefs = {
+            seeking: [],
+            ageRange: { min: 25, max: 35 },
+            distanceKm: 50,
+            intent: [],
+            monogamy: true,
+            childrenPlan: [],
+          };
+        }
         
         // Calculate age from birthDate if available
-        let age = data.age || 0;
-        if (data.birthDate) {
-          const birthDate = new Date(data.birthDate);
+        let age = userData.age || 0;
+        if (userData.birthDate) {
+          const birthDate = new Date(userData.birthDate);
           const today = new Date();
           age = today.getFullYear() - birthDate.getFullYear();
           const monthDiff = today.getMonth() - birthDate.getMonth();
@@ -58,48 +65,48 @@ export class ProfileService {
         
         return {
           id: userId,
-          displayName: data.displayName || '',
+          displayName: userData.displayName || '',
           age: age,
-          birthDate: data.birthDate,
-          birthTime: data.birthTime,
-          height: data.height,
-          profession: data.profession,
-          birthPlace: data.birthPlace,
-          location: data.location,
-          gender: data.gender,
-          customGender: data.customGender,
-          pronouns: data.pronouns,
-          customPronouns: data.customPronouns,
-          seeking: data.seeking || [],
-          customSeeking: data.customSeeking,
-          relationshipGoals: data.relationshipGoals || [],
-          monogamy: data.monogamy,
-          childrenPlan: data.childrenPlan,
-          childrenPlanDetails: data.childrenPlanDetails,
-          bio: data.bio || '',
-          prompts: data.prompts || {},
-          photos: data.photos || [],
-          profilePhotoUrl: data.profilePhotoUrl,
-          personality: data.personality,
-          interests: data.interests || [],
-          customInterests: data.customInterests || [],
-          smoking: data.smoking,
-          drinking: data.drinking,
-          diet: data.diet,
-          exercise: data.exercise,
+          birthDate: userData.birthDate,
+          birthTime: userData.birthTime,
+          height: userData.height,
+          profession: userData.profession,
+          birthPlace: userData.birthPlace,
+          location: userData.location,
+          gender: userData.gender,
+          pronouns: userData.pronouns,
+  
+                  // Match preferences from users/{uid}/preferences/match
+        seeking: matchPrefs.seeking || [],
+        ageRange: matchPrefs.ageRange || { min: 25, max: 35 },
+        maxDistance: matchPrefs.distanceKm || 50,
+        monogamy: matchPrefs.monogamy,
+
+          relationshipGoals: userData.relationshipGoals || [],
+          bio: userData.bio || '',
+          prompts: userData.prompts || {},
+          photos: userData.photos || [],
+          profilePhotoUrl: userData.profilePhotoUrl,
+          personality: userData.personality,
+          interests: userData.interests || [],
+
+          smoking: userData.smoking,
+          drinking: userData.drinking,
+          diet: userData.diet,
+          exercise: userData.exercise,
           socialLinks: {
-            instagram: data.socialLinks?.instagram || '',
-            spotify: data.socialLinks?.spotify || '',
-            twitter: data.socialLinks?.twitter || '',
-            linkedin: data.socialLinks?.linkedin || '',
+            instagram: userData.socialLinks?.instagram || '',
+            spotify: userData.socialLinks?.spotify || '',
+            twitter: userData.socialLinks?.twitter || '',
+            linkedin: userData.socialLinks?.linkedin || '',
           },
-          showOrientation: data.showOrientation,
-          showGender: data.showGender,
-          incognitoMode: data.incognitoMode,
-          acceptTerms: data.acceptTerms,
-          acceptPrivacy: data.acceptPrivacy,
-          createdAt: data.createdAt?.toDate(),
-          updatedAt: data.updatedAt?.toDate(),
+          showOrientation: userData.showOrientation,
+          showGender: userData.showGender,
+          incognitoMode: userData.incognitoMode,
+          acceptTerms: userData.acceptTerms,
+          acceptPrivacy: userData.acceptPrivacy,
+          createdAt: userData.createdAt?.toDate(),
+          updatedAt: userData.updatedAt?.toDate(),
         };
       }
 
@@ -248,11 +255,21 @@ export class ProfileService {
 
     const {
       // preferences to be split out:
-      seeking, ageRange, maxDistance,
-      relationshipType, monogamy, childrenPlan,
+      preferences,
       // everything else stays in the profile doc:
       ...profileDoc
     } = data;
+
+    // Extract match preferences
+    const matchPrefsData = preferences?.match || {};
+    const {
+      seeking = [],
+      ageRange = { min: 25, max: 35 },
+      distanceKm = 50,
+      intent = [],
+      monogamy = true,
+      childrenPlan = [],
+    } = matchPrefsData;
 
     const now = serverTimestamp();
 
@@ -263,12 +280,12 @@ export class ProfileService {
     // Match preferences (users/{uid}/preferences/match) - now includes relationship prefs
     const matchRef = doc(db, 'users', uid, 'preferences', 'match');
     const matchPrefs: MatchPrefs = {
-      seeking: seeking ?? [],
-      ageRange: ageRange ?? { min: 25, max: 35 },
-      distanceKm: typeof maxDistance === 'number' ? maxDistance : 50,
-      intent: mapRelationshipTypeToIntent(relationshipType),
-      monogamy,
-      childrenPlan,
+      seeking: seeking,
+      ageRange: ageRange,
+      distanceKm: distanceKm,
+      intent: intent,
+      monogamy: monogamy,
+      childrenPlan: childrenPlan,
       version: 1,
       updatedAt: now,
     };

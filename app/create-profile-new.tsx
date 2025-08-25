@@ -20,6 +20,7 @@ import { spacing } from '../theme/spacings';
 import StepHeader from '../components/StepHeader';
 import StepNavigation from '../components/StepNavigation';
 import { useCreateProfileForm } from '../hooks/useCreateProfileForm';
+import { CreateProfileFormData } from '../types/profile';
 import Step1BasicInfo from '../components/steps/Step1BasicInfo';
 import Step2RelationshipGoals from '../components/steps/Step2RelationshipGoals';
 import Step3AboutPrompts from '../components/steps/Step3AboutPrompts';
@@ -179,96 +180,22 @@ const CITIES = [
   'Sacramento', 'Mesa', 'Kansas City', 'Atlanta', 'Long Beach', 'Colorado Springs',
 ];
 
-interface FormData {
-  // Step 1: Basic Info
-  displayName: string;
-  birthDate: string;
-  birthTime: string;
-  location: {
-    city: string;
-    country: string;
-    latitude: number;
-    longitude: number;
-  };
-  gender: string;
-  customGender?: string;
-  pronouns: string;
-  customPronouns?: string;
-  sexualOrientation: string[];
-  customOrientation?: string;
+type FormData = CreateProfileFormData;
 
-  // Step 2: Relationship Goals
-  relationshipType: string;
-  monogamy: boolean;
-  childrenPlan: string;
-  childrenPlanDetails?: string;
 
-  // Step 3: About & Prompts
-  bio: string;
-  prompts: {
-    [key: string]: string;
-  };
 
-  // Step 4: Interests & Lifestyle
-  interests: string[];
-  customInterests: string[];
-  smoking: string;
-  drinking: string;
-  diet: string;
-  exercise: string;
-
-  // Step 5: Photos
-  photos: string[];
-  profilePhotoUrl: string;
-
-  // Step 6: Privacy
-  showOrientation: boolean;
-  showGender: boolean;
-  incognitoMode: boolean;
-  acceptTerms: boolean;
-  acceptPrivacy: boolean;
-}
-
-const INITIAL_FORM_DATA: FormData = {
-  displayName: '',
-  birthDate: '',
-  birthTime: '',
-  location: {
-    city: '',
-    country: 'United States',
-    latitude: 0,
-    longitude: 0,
-  },
-  gender: '',
-  customGender: '',
-  pronouns: '',
-  customPronouns: '',
-  sexualOrientation: [],
-  customOrientation: '',
-
-  relationshipType: [],
-  monogamy: true,
-  childrenPlan: [],
-  childrenPlanDetails: '',
-
-  bio: '',
-  prompts: {},
-
-  interests: [],
-  customInterests: [],
-  smoking: '',
-  drinking: '',
-  diet: '',
-  exercise: '',
-
-  photos: [],
-  profilePhotoUrl: '',
-
-  showOrientation: true,
-  showGender: true,
-  incognitoMode: false,
-  acceptTerms: false,
-  acceptPrivacy: false,
+// Helper function to set touched state by path
+const setTouchedByPath = (prev: any, path: string, val: boolean = true) => {
+  const parts = path.split('.');
+  const clone = { ...prev };
+  let cur = clone;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const p = parts[i];
+    cur[p] = cur[p] ?? {};
+    cur = cur[p];
+  }
+  cur[parts[parts.length - 1]] = val;
+  return clone;
 };
 
 export default function CreateProfileNewScreen() {
@@ -280,6 +207,10 @@ export default function CreateProfileNewScreen() {
     formData, 
     updateFormData, 
     updateNestedField, 
+    setValue,
+    setSeeking,
+    setAgeRange,
+    setDistanceKm,
     validateCurrentStep, 
     handleSubmit, 
     isSubmitting,
@@ -321,27 +252,31 @@ export default function CreateProfileNewScreen() {
 
   const handleNext = useCallback(async () => {
     if (currentStep < 6) {
-      const isValid = await validateCurrentStep(currentStep);
+      const isValid = await validateCurrentStep(currentStep, (hasError) => {
+        // Callback for Step 2 validation errors
+        if (currentStep === 2) {
+          console.log('🔍 Step 2 validation callback:', hasError);
+        }
+      });
       if (isValid) {
         animateStepTransition('next', () => {
           setCurrentStep(prev => prev + 1);
         });
       } else {
         // Trigger validation to show errors and mark all fields as touched
-        await validateCurrentStep(currentStep);
-        // Mark all fields in current step as touched
-        const stepFields = getStepFieldsForTouched(currentStep);
-        const newTouched: Record<string, boolean> = {};
-        stepFields.forEach((field: string) => {
-          // Handle nested fields like 'location.city'
-          if (field.includes('.')) {
-            const [parent, child] = field.split('.');
-            newTouched[field] = true;
-          } else {
-            newTouched[field] = true;
+        await validateCurrentStep(currentStep, (hasError) => {
+          // Callback for Step 2 validation errors
+          if (currentStep === 2) {
+            console.log('🔍 Step 2 validation callback (retry):', hasError);
           }
         });
-        setTouched(prev => ({ ...prev, ...newTouched }));
+        // Mark all fields in current step as touched
+        const stepFields = getStepFieldsForTouched(currentStep);
+        let nextTouched = { ...touched };
+        stepFields.forEach((fieldPath: string) => {
+          nextTouched = setTouchedByPath(nextTouched, fieldPath, true);
+        });
+        setTouched(nextTouched);
         // Don't proceed to next step, just show errors
       }
     } else {
@@ -363,9 +298,9 @@ export default function CreateProfileNewScreen() {
   const getStepFieldsForTouched = useCallback((step: number): string[] => {
     switch (step) {
       case 1:
-        return ['displayName', 'birthDate', 'location.city', 'gender', 'seeking'];
+        return ['displayName', 'birthDate', 'location.city', 'gender', 'preferences.match.seeking'];
       case 2:
-        return ['relationshipType'];
+        return ['preferences.match.intent', 'preferences.match.monogamy'];
       case 3:
         return ['bio'];
       case 4:
@@ -502,22 +437,26 @@ export default function CreateProfileNewScreen() {
 
   const renderCurrentStep = () => {
     console.log('🔍 renderCurrentStep called with step:', currentStep);
-    console.log('🔍 formData:', formData);
-    console.log('🔍 errors:', errors);
-    console.log('🔍 touched:', touched);
+    console.log('🔍 formData:', JSON.stringify(formData, null, 2));
+    console.log('🔍 errors:', JSON.stringify(errors, null, 2));
+    console.log('🔍 touched:', JSON.stringify(touched, null, 2));
     
     switch (currentStep) {
       case 1:
         console.log('🔍 Rendering Step1BasicInfo');
         return (
           <Step1BasicInfo
-            formData={formData}
-            updateFormData={updateFormData}
+            formData={formData as any}
+            updateFormData={updateFormData as any}
             updateNestedField={updateNestedField}
+            setValue={setValue as any}
+            setSeeking={setSeeking}
+            setAgeRange={setAgeRange}
+            setDistanceKm={setDistanceKm}
             errors={errors}
             touched={touched}
             setFieldTouched={(field: string, touched: boolean) => {
-              setTouched(prev => ({ ...prev, [field]: touched }));
+              setTouched(prev => setTouchedByPath(prev, field, touched));
             }}
           />
         );
@@ -527,9 +466,14 @@ export default function CreateProfileNewScreen() {
           <Step2RelationshipGoals
             formData={formData}
             updateFormData={updateFormData}
+            updateNestedField={updateNestedField}
             errors={errors}
             touched={touched}
             setFieldTouched={setFieldTouched}
+            onValidationError={(field, hasError) => {
+              console.log('🔍 Validation error for field:', field, 'hasError:', hasError);
+              // This will be used to communicate validation state
+            }}
           />
         );
       case 3:

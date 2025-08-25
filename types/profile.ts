@@ -19,11 +19,8 @@ export interface UserProfile {
     longitude: number;
   };
   gender?: string;
-  customGender?: string;
   pronouns?: string;
-  customPronouns?: string;
   seeking: string[]; // e.g. ["men", "women", "nonbinary"]
-  customSeeking?: string;
   ageRange?: {
     min: number;
     max: number;
@@ -31,8 +28,6 @@ export interface UserProfile {
   maxDistance?: number;
   relationshipGoals?: string[]; // e.g. ["Long-term relationship", "Friendship"]
   monogamy?: boolean;
-  childrenPlan?: string;
-  childrenPlanDetails?: string;
   bio: string;
   prompts?: { [key: string]: string };
   photos: string[];
@@ -42,7 +37,6 @@ export interface UserProfile {
     openness: number;
   };
   interests: string[];
-  customInterests?: string[];
   smoking?: string;
   drinking?: string;
   diet?: string;
@@ -116,23 +110,27 @@ export interface BasicInfo {
   };
   profession?: string;
   gender: string;
-  customGender?: string;
   pronouns: string;
-  customPronouns?: string;
-  seeking: string[];
-  customSeeking?: string;
-  ageRange: {
-    min: number;
-    max: number;
+  preferences: {
+    match: {
+      seeking: string[];
+      ageRange: {
+        min: number;
+        max: number;
+      };
+      distanceKm: number;
+    };
   };
-  maxDistance: number;
 }
 
 export interface RelationshipGoals {
-  relationshipType: string[];
-  monogamy: boolean;
-  childrenPlan: string[];
-  childrenPlanDetails?: string;
+  preferences: {
+    match: {
+      intent: string[];
+      childrenPlan: string[];
+      monogamy: boolean;
+    };
+  };
 }
 
 export interface AboutPrompts {
@@ -142,7 +140,6 @@ export interface AboutPrompts {
 
 export interface InterestsLifestyle {
   interests: string[];
-  customInterests: string[];
   smoking: string;
   drinking: string;
   diet: string;
@@ -184,22 +181,20 @@ export interface CreateProfileFormData {
   };
   profession?: string;
   gender: string;
-  customGender?: string;
   pronouns: string;
-  customPronouns?: string;
-  seeking: string[];
-  customSeeking?: string;
-  ageRange: {
-    min: number;
-    max: number;
+  preferences: {
+    match: {
+      seeking: string[];
+      ageRange: {
+        min: number;
+        max: number;
+      };
+      distanceKm: number;
+      childrenPlan: string[];
+      intent: string[];
+      monogamy: boolean;
+    };
   };
-  maxDistance: number;
-
-  // Step 2: Relationship Goals
-  relationshipType: string[];
-  monogamy: boolean;
-  childrenPlan: string[];
-  childrenPlanDetails?: string;
 
   // Step 3: About & Prompts
   bio: string;
@@ -207,7 +202,6 @@ export interface CreateProfileFormData {
 
   // Step 4: Interests & Lifestyle
   interests: string[];
-  customInterests: string[];
   smoking: string;
   drinking: string;
   diet: string;

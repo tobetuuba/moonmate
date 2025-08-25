@@ -33,58 +33,71 @@ export const step1Schema = yup.object({
   pronouns: yup
     .string()
     .optional(),
-  seeking: yup
-    .array()
-    .of(yup.string())
-    .min(1, 'Please select what you are looking for')
-    .required('Please select what you are looking for'),
-  ageRange: yup.object({
-    min: yup
-      .number()
-      .min(18, 'Minimum age must be at least 18')
-      .max(100, 'Minimum age must be less than 100')
-      .required('Age range is required'),
-    max: yup
-      .number()
-      .min(18, 'Maximum age must be at least 18')
-      .max(100, 'Maximum age must be less than 100')
-      .required('Age range is required'),
-  }).test('age-range', 'Maximum age must be greater than minimum age', function(value) {
-    if (value?.min && value?.max) {
-      return value.max > value.min;
-    }
-    return true;
+  preferences: yup.object({
+    match: yup.object({
+      seeking: yup
+        .array()
+        .of(yup.string())
+        .min(1, 'Please select what you are looking for')
+        .required('Please select what you are looking for'),
+      
+      distanceKm: yup
+        .number()
+        .min(1, 'Distance must be at least 1 km')
+        .max(200, 'Distance must be less than 200 km')
+        .required('Maximum distance is required'),
+      ageRange: yup.object({
+        min: yup
+          .number()
+          .min(18, 'Minimum age must be at least 18')
+          .max(100, 'Minimum age must be less than 100')
+          .required('Age range is required'),
+        max: yup
+          .number()
+          .min(18, 'Maximum age must be at least 18')
+          .max(100, 'Maximum age must be less than 100')
+          .required('Age range is required'),
+      }).test('age-range', 'Maximum age must be greater than minimum age', function(value) {
+        if (value?.min && value?.max) {
+          return value.max > value.min;
+        }
+        return true;
+      }),
+      childrenPlan: yup
+        .array()
+        .of(yup.string())
+        .optional(),
+      intent: yup
+        .array()
+        .of(yup.string())
+        .min(1, 'Please select what you are looking for')
+        .required('Please select what you are looking for'),
+    }),
   }),
-  maxDistance: yup
-    .number()
-    .min(1, 'Distance must be at least 1 km')
-    .max(100, 'Distance must be less than 100 km')
-    .required('Maximum distance is required'),
+
+
+
+
+
 });
 
 // Step 2: Relationship Goals validation
 export const step2Schema = yup.object({
-  relationshipType: yup
+  intent: yup
     .array()
     .of(yup.string())
     .min(1, 'Please select at least one relationship type')
     .required('Relationship type is required'),
   monogamy: yup
     .boolean()
-    .required(),
-  childrenPlan: yup
-    .array()
-    .of(yup.string())
-    .optional(),
+    .required('Please select your relationship preference'),
 });
 
 // Step 3: About & Prompts validation
 export const step3Schema = yup.object({
   bio: yup
     .string()
-    .optional()
-    .min(10, 'Bio must be at least 10 characters if provided')
-    .max(500, 'Bio must be less than 500 characters'),
+    .optional(),
   prompts: yup
     .object()
     .optional(),
@@ -149,12 +162,11 @@ export const completeFormSchema = yup.object({
   location: step1Schema.fields.location,
   gender: step1Schema.fields.gender,
   pronouns: step1Schema.fields.pronouns,
-  seeking: step1Schema.fields.seeking,
+  preferences: step1Schema.fields.preferences,
   
   // Step 2
-  relationshipType: step2Schema.fields.relationshipType,
+  intent: step2Schema.fields.intent,
   monogamy: step2Schema.fields.monogamy,
-  childrenPlan: step2Schema.fields.childrenPlan,
   
   // Step 3
   bio: step3Schema.fields.bio,
