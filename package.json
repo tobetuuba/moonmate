@@ -64,9 +64,10 @@
     "@babel/core": "^7.25.2",
     "@types/react": "~19.0.10",
     "@types/react-native-multi-slider": "^0.3.6",
+    "babel-plugin-module-resolver": "^5.0.2",
     "babel-plugin-transform-inline-environment-variables": "^0.4.4",
-    "typescript": "~5.8.3",
     "eslint": "^9.0.0",
-    "eslint-config-expo": "~9.2.0"
+    "eslint-config-expo": "~9.2.0",
+    "typescript": "~5.8.3"
   }
 }
