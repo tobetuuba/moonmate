@@ -5,6 +5,18 @@ import {
 import { db } from './client';
 import { Result, ok, err } from '../../shared/lib/result';
 
+// Helper functions for mapping Firestore DTO to domain
+const asDate = (v: any) => (v?.toDate?.() ? v.toDate() : v);
+const mapUser = (dto: any, id: string) => ({
+  id,
+  ...dto,
+  birthDate: asDate(dto.birthDate),
+  birthTime: asDate(dto.birthTime),
+  createdAt: asDate(dto.createdAt),
+  updatedAt: asDate(dto.updatedAt),
+  lastActiveAt: asDate(dto.lastActiveAt),
+}) as User;
+
 export interface UserRepository {
   getById(userId: string): Promise<Result<User, Error>>;
   getCurrent(): Promise<Result<User, Error>>;
@@ -43,8 +55,8 @@ export class FirebaseUserRepository implements UserRepository {
       const ref = doc(db, this.collection, userId);
       const snap = await getDoc(ref);
       if (!snap.exists()) return err(new Error('User not found'));
-      const dto = snap.data() as any; // or UserDTO
-      const user = (UserConverter?.toDomain ? UserConverter.toDomain(dto) : dto) as User;
+      const dto = snap.data() as any;
+      const user = mapUser(dto, snap.id);
       return ok(user);
     } catch (e) {
       return err(e instanceof Error ? e : new Error('Failed to fetch user'));
@@ -103,8 +115,8 @@ export class FirebaseUserRepository implements UserRepository {
 
       const out: User[] = [];
       snap.forEach(d => {
-        const dto = d.data() as any; // or UserDTO
-        const user = (UserConverter?.toDomain ? UserConverter.toDomain(dto) : dto) as User;
+        const dto = d.data() as any;
+        const user = mapUser(dto, d.id);
         // client-side distance filter
         const dist = this.calculateDistance(
           location.latitude, location.longitude,
@@ -140,5 +152,4 @@ export class FirebaseUserRepository implements UserRepository {
   }
 }
 
-// Placeholder for UserConverter - remove if not needed
-const UserConverter = undefined;
+
