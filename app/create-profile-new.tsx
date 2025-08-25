@@ -213,6 +213,7 @@ export default function CreateProfileNewScreen() {
     setDistanceKm,
     validateCurrentStep, 
     handleSubmit, 
+    onSubmit,
     isSubmitting,
     errors,
     setFieldTouched,
@@ -280,7 +281,8 @@ export default function CreateProfileNewScreen() {
         // Don't proceed to next step, just show errors
       }
     } else {
-      handleSubmit();
+      // Directly call onSubmit without validation
+      onSubmit(formData);
     }
   }, [currentStep, validateCurrentStep, handleSubmit, animateStepTransition]);
 

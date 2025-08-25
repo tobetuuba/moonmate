@@ -32,7 +32,7 @@ const INITIAL_FORM_DATA: FormData = {
       distanceKm: 50,
       childrenPlan: [],
       intent: [],
-      monogamy: false,
+              monogamy: true,
     },
   },
 
@@ -75,8 +75,8 @@ export function useCreateProfileForm() {
     getValues,
     register,
     setError,
+    clearErrors,
   } = useForm<FormData>({
-    resolver: yupResolver(completeFormSchema as any),
     defaultValues: {
       ...INITIAL_FORM_DATA,
       // Ensure preferences.match has all required fields
@@ -134,17 +134,33 @@ export function useCreateProfileForm() {
   const updateFormData = (field: keyof FormData, value: any) => {
     console.log('🔍 updateFormData called with:', field, JSON.stringify(value, null, 2));
     setValue(field, value, { shouldValidate: true });
+    
+    // Clear error if field is filled
+    if (value && (typeof value === 'string' ? value.trim().length > 0 : true)) {
+      clearErrors(field);
+    }
   };
 
   const updateNestedField = (parentField: keyof FormData | string, childField: string, value: any) => {
     const path = childField ? `${parentField}.${childField}` : String(parentField);
     console.log('🔍 updateNestedField ->', path, JSON.stringify(value, null, 2));
     setValue(path as any, value, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
+    
+    // Clear error if nested field is filled
+    if (value !== undefined && value !== null && (typeof value === 'string' ? value.trim().length > 0 : true)) {
+      clearErrors(path as any);
+    }
   };
 
   // Sugar functions for common nested field updates
-  const setSeeking = (vals: string[]) =>
+  const setSeeking = (vals: string[]) => {
     setValue('preferences.match.seeking', vals, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
+    
+    // Clear error if seeking is selected
+    if (vals && vals.length > 0) {
+      clearErrors('preferences.match.seeking');
+    }
+  };
   
   const setAgeRange = (ageRange: { min: number; max: number }) =>
     setValue('preferences.match.ageRange', ageRange, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
@@ -157,13 +173,109 @@ export function useCreateProfileForm() {
     console.log('🔍 validateCurrentStep - step:', step, 'stepFields:', stepFields);
     
     if (step === 1) {
-      // Step 1: Only validate seeking field, ignore intent and monogamy
+      // Step 1: First trigger validation to update error state, then check manually
+      const result = await trigger(stepFields);
+      console.log('🔍 Step 1 trigger result:', result);
+      
+      // Manual validation for specific fields (ignore intent and monogamy)
+      const displayName = getValues('displayName');
+      const birthDate = getValues('birthDate');
+      const location = getValues('location');
+      const gender = getValues('gender');
       const seeking = getValues('preferences.match.seeking');
+      
+      let hasError = false;
+      
+      if (!displayName || displayName.trim().length === 0) {
+        console.log('❌ Step 1 validation failed: displayName is required');
+        setError('displayName', {
+          type: 'manual',
+          message: 'Display name is required'
+        });
+        setValue('displayName', '', { shouldTouch: true });
+        hasError = true;
+      }
+      
+      if (!birthDate) {
+        console.log('❌ Step 1 validation failed: birthDate is required');
+        setError('birthDate', {
+          type: 'manual',
+          message: 'Birth date is required'
+        });
+        setValue('birthDate', '', { shouldTouch: true });
+        hasError = true;
+      }
+      
+      if (!location || !location.city || !location.country) {
+        console.log('❌ Step 1 validation failed: location is required');
+        setError('location', {
+          type: 'manual',
+          message: 'Location is required'
+        });
+        setValue('location', formData.location || {}, { shouldTouch: true });
+        hasError = true;
+      }
+      
+      if (!gender) {
+        console.log('❌ Step 1 validation failed: gender is required');
+        setError('gender', {
+          type: 'manual',
+          message: 'Gender is required'
+        });
+        setValue('gender', '', { shouldTouch: true });
+        hasError = true;
+      }
+      
       if (!seeking || seeking.length === 0) {
         console.log('❌ Step 1 validation failed: seeking is required');
+        setError('preferences.match.seeking', {
+          type: 'manual',
+          message: 'Please select what you are looking for'
+        });
+        setValue('preferences.match.seeking', [], { shouldTouch: true });
+        hasError = true;
+      }
+      
+      if (hasError) {
         return false;
       }
+      
       console.log('✅ Step 1 validation passed');
+      return result; // Return trigger result to ensure error state is updated
+    }
+    
+    if (step === 2) {
+      // Step 2: Validate intent and monogamy fields specifically
+      const intent = getValues('preferences.match.intent');
+      const monogamy = getValues('preferences.match.monogamy');
+      
+      let hasError = false;
+      
+      if (!intent || intent.length === 0) {
+        console.log('❌ Step 2 validation failed: intent is required');
+        setError('preferences.match.intent', {
+          type: 'manual',
+          message: 'Please select at least one relationship type'
+        });
+        setValue('preferences.match.intent', [], { shouldTouch: true });
+        hasError = true;
+      }
+      
+      if (monogamy === undefined || monogamy === null) {
+        console.log('❌ Step 2 validation failed: monogamy is required');
+        setError('preferences.match.monogamy', {
+          type: 'manual',
+          message: 'Please select your relationship preference'
+        });
+        setValue('preferences.match.monogamy', false, { shouldTouch: true });
+        hasError = true;
+      }
+      
+      if (hasError) {
+        return false;
+      }
+      
+      console.log('✅ Step 2 validation passed');
       return true;
     }
     
@@ -314,6 +426,7 @@ export function useCreateProfileForm() {
     setDistanceKm,
     validateCurrentStep,
     handleSubmit,
+    onSubmit,
     isSubmitting,
     errors,
     control,

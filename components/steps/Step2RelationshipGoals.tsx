@@ -124,7 +124,6 @@ export default function Step2RelationshipGoals({
                   const cur = formData.preferences?.match?.intent || [];
                   const next = selected ? cur.filter(v => v !== opt.value) : [...cur, opt.value];
                   updateNestedField('preferences.match', 'intent', next);
-                  setFieldTouched?.('preferences.match.intent', true);
                 }}
               >
                 <Text style={[styles.optionChipText, selected && styles.optionChipTextSelected]}>
@@ -156,7 +155,6 @@ export default function Step2RelationshipGoals({
             ]}
             onPress={() => {
               updateNestedField('preferences.match', 'monogamy', true);
-              setFieldTouched?.('preferences.match.monogamy', true);
             }}
           >
             <Text style={[
@@ -173,7 +171,6 @@ export default function Step2RelationshipGoals({
             ]}
             onPress={() => {
               updateNestedField('preferences.match', 'monogamy', false);
-              setFieldTouched?.('preferences.match.monogamy', true);
             }}
           >
             <Text style={[
@@ -189,6 +186,8 @@ export default function Step2RelationshipGoals({
             Please select your relationship preference
           </Text>
         )}
+        
+
       </View>
 
       {/* Children Plan */}
@@ -302,5 +301,11 @@ const styles = StyleSheet.create({
     borderRadius: spacing.input.borderRadius,
     padding: spacing.sm,
     backgroundColor: colors.accent.error + '10',
+  },
+  debugText: {
+    ...typography.styles.caption,
+    color: colors.accent.error,
+    marginTop: spacing.xs,
+    fontSize: 10,
   },
 });
